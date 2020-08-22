@@ -77,6 +77,21 @@ class DataProcessor:
         #update the mean/std values of model
         self.update_model_normalization(model)
 
+    # # def subtract_goals(self,a, b):
+    # #     assert a.shape == b.shape
+    # #     return a - b
+    # def _preprocess_og(self, o, ag, g):  # her and iter both don't use relative goals.
+    #     # if self.relative_goals:
+    #     #     g_shape = g.shape
+    #     #     g = g.reshape(-1, self.dimg)
+    #     #     ag = ag.reshape(-1, self.dimg)
+    #     #     g = self.subtract_goals(g, ag)
+    #     #     g = g.reshape(*g_shape)
+    #     clip_obs = 200
+    #     o = np.clip(o, -clip_obs, clip_obs)
+    #     g = np.clip(g, -clip_obs, clip_obs)
+    #     return o, g
+
     def preprocess_data(self, dataset):
 
         #make data mean0/std1

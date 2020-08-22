@@ -25,51 +25,58 @@ class MBEnvWrapper:
         self.unwrapped_env = env.env.env
         self.action_dim = self.unwrapped_env.action_space.shape[0]
 
+        try:
+            obs = env.reset()
+            self.observation_dim = obs['observation'].shape[0]+obs['desired_goal'].shape[0]
+            self.o_dim = obs['observation'].shape[0]
+            self.g_dim = obs['desired_goal'].shape[0]
+            self.ag_dim = obs['achieved_goal'].shape[0]
+            self.info_dim = 1
+
+        except :
+            self.observation_dim = self.unwrapped_env.observation_space.shape[0]
+
 
     def reset(self, reset_state=None, return_start_state=False):
 
         if reset_state:
-            reset_pose = reset_state['reset_pose']
-            reset_vel = reset_state['reset_vel']
-            reset_goal = reset_state['reset_goal']
-
             # reset to specified state
-            obs = self.unwrapped_env.do_reset(reset_pose, reset_vel, reset_goal)
+            obs = self.unwrapped_env.do_reset(reset_state)
+            # obs = self.env.reset(reset_state)
 
         else:
+            obs = self.env.reset()
 
             # standard reset call
-            obs = self.unwrapped_env.reset_model()
-
-            #pose
-            if hasattr(self.unwrapped_env, 'reset_pose'):
-                reset_pose = self.unwrapped_env.reset_pose.copy()
-            else:
-                reset_pose = None
-
-            #vel
-            if hasattr(self.unwrapped_env, 'reset_vel'):
-                reset_vel = self.unwrapped_env.reset_vel.copy()
-            else:
-                reset_vel = None
-
-            #goal
-            if hasattr(self.unwrapped_env, 'reset_goal'):
-                reset_goal = self.unwrapped_env.reset_goal.copy()
-            else:
-                reset_goal = None
-
-        #save relevant state info needed to reset in future
-        reset_state = dict(
-            reset_pose = reset_pose,
-            reset_vel = reset_vel,
-            reset_goal = reset_goal)
+            ###################################### ## this one can reset timestep limit
+            # if hasattr(self.env, 'reset_model'):
+            #     obs = self.env.reset_model()
+            # else:
+            #     obs = self.env.reset()
+            ######################################
+            # ###################################### ## this one can not reset timestep limit
+            # if hasattr(self.unwrapped_env, 'reset_model'):
+            #     obs = self.unwrapped_env.reset_model()
+            # else:
+            #     obs = self.unwrapped_env.reset()
+            # ######################################
 
         #return
         if return_start_state:
-            return obs, reset_state
+            if hasattr(self.unwrapped_env, 'sim'):
+                # reset_state = self.unwrapped_env.initial_state
+                reset_state = self.unwrapped_env.sim.get_state()
+            else:
+                reset_state = None
+            #goal
+            if hasattr(self.unwrapped_env, 'goal'):
+                reset_goal = self.unwrapped_env.goal
+            else:
+                reset_goal = None
+            return obs, [reset_state, reset_goal]
         else:
             return obs
 
     def step(self, action):
-        return self.unwrapped_env.step(action)
+        # return self.unwrapped_env.step(action)     ## this step method will have no done=true
+        return self.env.step(action)  # this one has timestep limit

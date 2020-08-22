@@ -34,7 +34,11 @@ class GymEnv(object):
         except AttributeError:
             self._action_dim = self.env.env.action_space.shape[0]
 
-        self._observation_dim = self.env.env.obs_dim
+        try:
+            self._observation_dim = self.env.env.obs_dim
+        except AttributeError:
+            obs = env.reset()
+            self._observation_dim = obs['observation'].shape[0]+obs['desired_goal'].shape[0]
 
         # Specs
         self.spec = EnvSpec(self._observation_dim, self._action_dim, self._horizon)

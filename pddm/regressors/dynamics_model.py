@@ -190,6 +190,11 @@ class Dyn_Model:
                 sum_training_loss += loss
                 num_training_batches += 1
 
+            # from ipdb import set_trace;
+            # set_trace()
+            sum_training_loss=1+sum_training_loss
+            num_training_batches=1+num_training_batches
+
             mean_training_loss = sum_training_loss / num_training_batches
 
             if ((i % 10 == 0) or (i == (nEpoch - 1))):

@@ -40,9 +40,11 @@ def create_env(env_name):
     env = MBEnvWrapper(GymEnv(env_name))
 
     # dimensions
-    dt_from_xml = env.unwrapped_env.skip * env.unwrapped_env.model.opt.timestep
-    dimO = env.env.env.observation_space.shape
-    dimA = env.env.env.action_space.shape
+    # dt_from_xml = env.unwrapped_env.skip * env.unwrapped_env.model.opt.timestep
+    dt_from_xml = env.unwrapped_env.dt
+    dimO = env.env.env.observation_space
+    dimA = env.env.env.action_space
+
     print('--------------------------------- \nSimulation dt: ', dt_from_xml)
     print('State space dimension: ', dimO)
     print('Action space dimension: ', dimA,
@@ -210,8 +212,12 @@ def collect_random_rollouts(env,
     c = CollectSamples(
         env, random_policy, visualize, dt_from_xml, is_random=True, random_sampling_params=random_sampling_params)
 
+
     #collect rollouts
     rollouts = c.collect_samples(num_rollouts, rollout_length)
+
+    # from ipdb import set_trace;
+    # set_trace()
 
     #done
     print("Performed ", len(rollouts), " rollouts, each with ",
@@ -282,7 +288,7 @@ def visualize_rendering(rollout_info,
     count = 0
 
     plotting_list = []
-    plotting_list.append(curr_state[which_index_to_plot])
+    # plotting_list.append(curr_state[which_index_to_plot])
 
     lasttime = time.time()
     starttime = time.time()
@@ -305,7 +311,7 @@ def visualize_rendering(rollout_info,
         if (visualize):
             render_env(env)
 
-        scores.append(env_info['score'])
+        # scores.append(env_info['score'])
         rewards.append(rew)
         just_one = True
         curr_state = np.copy(next_state)

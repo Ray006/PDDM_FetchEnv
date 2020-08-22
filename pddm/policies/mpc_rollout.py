@@ -128,8 +128,28 @@ class MPCRollout:
         #######################################
 
         zero_ac = np.zeros((self.env.action_dim,))
-        curr_state = np.copy(starting_observation)
-        curr_state_K = [curr_state]  #not K yet, but will be
+
+
+
+
+
+        if isinstance(starting_observation, dict):
+            obs, ag, g, successes = [], [], [], []
+            state_dict = starting_observation
+            obs.append(state_dict['observation'])
+            ag.append(state_dict['achieved_goal'])
+            g.append(state_dict['desired_goal'])
+
+            curr_state = np.concatenate((obs[-1],g[-1]))
+            curr_state_K = [curr_state]  # not K yet, but will be
+
+        else:
+            curr_state = np.copy(starting_observation)
+            curr_state_K = [curr_state]  #not K yet, but will be
+
+
+
+
 
         #take (K-1) steps of action 0
         for z in range(self.K - 1):
@@ -169,6 +189,7 @@ class MPCRollout:
             #### get optimal action
             ########################
 
+
             #curr_state_K : past K states
             #actions_taken : past all actions (taken so far in this rollout)
             if isRandom:
@@ -191,10 +212,20 @@ class MPCRollout:
             else:
                 action_to_document = np.copy(clean_action)
 
+            # from ipdb import set_trace;
+            # set_trace()
+
             ########################
             #### execute the action
             ########################
             next_state, rew, done, env_info = self.env.step(action_to_take)
+
+            if isinstance(next_state, dict):
+                state_dict = next_state
+                obs.append(state_dict['observation'])
+                ag.append(state_dict['achieved_goal'])
+                g.append(state_dict['desired_goal'])
+                next_state = np.concatenate((obs[-1], g[-1]))
 
             #################################################
             #### get predicted next_state
@@ -218,13 +249,9 @@ class MPCRollout:
                                   0)  #[K, acDim]
 
             #Look at prediction from the 1st model of the ensemble
-            predicted_next_state = self.dyn_models.do_forward_sim_singleModel(
-                [curr_state_K], [acs_K])
-            predicted_next_state_preprocessed = (
-                predicted_next_state - curr_mean_x) / curr_std_x
-            mpe_1step = np.mean(
-                np.square(predicted_next_state_preprocessed -
-                          next_state_preprocessed))
+            predicted_next_state = self.dyn_models.do_forward_sim_singleModel([curr_state_K], [acs_K])
+            predicted_next_state_preprocessed = (predicted_next_state - curr_mean_x) / curr_std_x
+            mpe_1step = np.mean(np.square(predicted_next_state_preprocessed - next_state_preprocessed))
             list_mpe_1step.append(mpe_1step)
 
             ################################
@@ -233,10 +260,14 @@ class MPCRollout:
 
             #save things
             rewards.append(rew)
-            scores.append(env_info['score'])
+            scores.append(self.env.unwrapped_env.get_score(state_dict))
+            # scores.append(env_info['score'])
             env_infos.append(env_info)
             actions_taken.append(action_to_document)
             total_reward_for_episode += rew
+
+            # from ipdb import set_trace;
+            # set_trace()
 
             #returned by taking a step in the env
             curr_state = np.copy(next_state)
@@ -272,6 +303,10 @@ class MPCRollout:
             starting_state=starting_fullenvstate,
             observations=np.array(traj_taken),
             actions=np.array(actions_taken),
+
+            obs=np.array(obs),
+            ag=np.array(ag),
+            g=np.array(g),
 
             rollout_rewardsPerStep=np.array(rewards),
             rollout_rewardTotal=total_reward_for_episode,

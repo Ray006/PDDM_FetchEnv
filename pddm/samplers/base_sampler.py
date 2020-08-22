@@ -67,7 +67,14 @@ def do_rollout(N_percpu,
             next_o, r, done, env_info = curr_env.step(a)
 
             #save info
-            observations.append(o)
+            if isinstance(o, dict):
+                obs = o['observation']
+                g = o['desired_goal']
+                curr_state = np.concatenate((obs, g))
+                observations.append(curr_state)
+            else:
+                observations.append(o)
+
             actions.append(a)
             rewards.append(r)
             agent_infos.append(0)
@@ -77,7 +84,14 @@ def do_rollout(N_percpu,
             step += 1
 
         #save all results of this candidate action sequence
-        observations.append(o)
+        if isinstance(o, dict):
+            obs = o['observation']
+            g = o['desired_goal']
+            curr_state = np.concatenate((obs, g))
+            observations.append(curr_state)
+        else:
+            observations.append(o)
+
         path = dict(
             observations=np.array(observations),
             # ^ starts w starting state, so 1 more entry than the others

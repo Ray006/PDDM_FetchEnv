@@ -32,6 +32,9 @@ DEFAULT_RENDER_SIZE = 480
 class MujocoEnv(gym.Env):
     """Superclass for all MuJoCo environments."""
 
+    # from ipdb import set_trace;
+    # set_trace()
+
     def __init__(self,
                  model_path: str,
                  frame_skip: int,

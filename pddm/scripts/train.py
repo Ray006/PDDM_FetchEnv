@@ -108,6 +108,7 @@ def run_job(args, save_dir=None):
         #initialize data processor
         data_processor = DataProcessor(args, duplicateData_switchObjs, indices_for_switching)
 
+
         #start a fresh run
         if continue_run==-1:
 
@@ -124,6 +125,10 @@ def run_job(args, save_dir=None):
                 rollouts_valRand = collect_random_rollouts(
                     env, random_policy, args.num_rand_rollouts_val,
                     args.rand_rollout_length, dt_from_xml, args)
+
+            # from ipdb import set_trace;
+            # set_trace()
+
 
             #convert (rollouts --> dataset)
             dataset_trainRand = data_processor.convertRolloutsToDatasets(
@@ -184,6 +189,9 @@ def run_job(args, save_dir=None):
         ##############################################
         ### dynamics model + controller
         ##############################################
+
+        # from ipdb import set_trace;
+        # set_trace()
 
         dyn_models = Dyn_Model(inputSize, outputSize, acSize, sess, params=args)
 
@@ -309,7 +317,6 @@ def run_job(args, save_dir=None):
                     rand_loss_list = 0,
                     onPol_loss_list = 0,)
             else:
-
                 ## train model
                 training_loss, training_lists_to_save = dyn_models.train(
                     inputs,
@@ -343,8 +350,12 @@ def run_job(args, save_dir=None):
                     print("\n####################### Performing MPC rollout #",
                           rollout_num)
 
+                # from ipdb import set_trace;
+                # set_trace()
+
                 #reset env randomly
                 starting_observation, starting_state = env.reset(return_start_state=True)
+
 
                 rollout_info = mpc_rollout.perform_rollout(
                     starting_state,
@@ -367,6 +378,11 @@ def run_job(args, save_dir=None):
 
             rollouts_info_prevIter = rollouts_info.copy()
 
+            # from ipdb import set_trace;
+            # set_trace()
+
+            print(np.mean(np.array(list_rewards)))
+
             # visualize, if desired
             if args.visualize_MPC_rollout:
                 print("\n\nPAUSED FOR VISUALIZATION. Continue when ready to visualize.")
@@ -379,10 +395,19 @@ def run_job(args, save_dir=None):
             ### aggregate some random rollouts into training data
             #########################################################
 
+            # from ipdb import set_trace;
+            # set_trace()
+
             num_rand_rollouts = 5
             rollouts_rand = collect_random_rollouts(
                 env, random_policy, num_rand_rollouts, args.rollout_length,
                 dt_from_xml, args)
+
+            ## here to reflect rollouts_rand data ker
+
+
+
+
 
             #convert (rollouts --> dataset)
             dataset_rand_new = data_processor.convertRolloutsToDatasets(
@@ -410,6 +435,11 @@ def run_job(args, save_dir=None):
                     rollouts_train.append(rollout)
                 else:
                     rollouts_val.append(rollout)
+
+            ## here to reflect rollouts_train, but not the rollouts_val
+
+
+
 
             #aggregate into training data
             if counter==0: rollouts_valOnPol = []
@@ -492,6 +522,9 @@ def main():
     # job configs
     #####################
 
+    # from ipdb import set_trace;
+    # set_trace()
+
     # Get the job config files
     jobs = config_reader.process_config_files(general_args.config)
     assert jobs, 'No jobs found from config.'
@@ -534,5 +567,138 @@ def main():
             traceback.print_exc()
 
 
+
+
+def test_env():
+
+    from ipdb import set_trace;
+    set_trace()
+    import gym
+
+    #################### v1 ########################
+    # env = gym.make('MB_FetchPush-v1')
+    #
+    # env.reset()
+    # for t in range(2000):
+    #     a = env.action_space.sample()
+    #     next_o, r, done, env_info = env.step(a)
+    #     env.render()
+    #
+    # from ipdb import set_trace;
+    # set_trace()
+
+    #################### v5 test done=true timestep limit ########################
+    # env = gym.make('FetchPush-v1')
+    # env = gym.make('MB_FetchPush-v1')
+    #
+    # for i in range(2000):
+    #     env.reset()                 #### reset() ####
+    #     for t in range(100):
+    #         a = env.action_space.sample()
+    #         o, r, done, env_info = env.step(a)  #### step() ####
+    #         env.render()
+    #         if done:
+    #             print('done in i and t:',done,i,t)
+    #             break
+    #
+    #     from ipdb import set_trace;
+    #     set_trace()
+    #
+
+    env, dt_from_xml = create_env('MB_FetchPush-v1')
+
+    for i in range(2000):
+        env.reset()                 #### reset() in mb_env.py ####
+        for t in range(100):
+            a = env.env.action_space.sample()
+            o, r, done, env_info = env.step(a)  #### step() in mb_env.py  ####
+            env.env.render()
+            if done:
+                print('done in i and t:',done,i,t)
+                break
+
+        from ipdb import set_trace;
+        set_trace()
+
+
+    #################### v4 used in the code ########################
+    # env, dt_from_xml = create_env('MB_FetchPush-v1')
+    #
+    # for i in range(2000):
+    #     env.reset()                 #### reset() ####
+    #     for t in range(100):
+    #         a = env.env.action_space.sample()
+    #         o, r, done, env_info = env.step(a)  #### step() ####
+    #         env.env.render()
+    #         if done:
+    #             print('done:',done)
+    #
+    #     from ipdb import set_trace;
+    #     set_trace()
+
+    #################### v3 ########################
+    # env, dt_from_xml = create_env('MB_FetchPush-v1')
+    #
+    # for t in range(2000):
+    #     env.env.reset()
+    #     for t in range(100):
+    #         a = env.env.action_space.sample()
+    #         next_o, r, done, env_info = env.env.step(a)
+    #         env.env.render()
+    #
+    #     from ipdb import set_trace;
+    #     set_trace()
+
+    #################### v2 ########################
+    # env, dt_from_xml = create_env('pddm_cube-v0')
+    # # env, dt_from_xml = create_env('Humanoid-v2')
+    #
+    # # env, dt_from_xml = create_env('MB_FetchPushEnv-v1')
+    # # env, dt_from_xml = create_env('FetchPush-v1')
+    #
+    # for t in range(2000):
+    #     env.reset()
+    #     env.env.reset()
+    #     env.env.env.reset()
+    #     for t in range(1):
+    #         a = env.env.action_space.sample()
+    #         a = env.env.env.action_space.sample()
+    #         next_o, r, done, env_info = env.step(a)
+    #         next_o, r, done, env_info = env.env.step(a)
+    #         next_o, r, done, env_info = env.env.env.step(a)
+    #         env.env.render()
+    #         env.env.env.render()
+    #
+    #     from ipdb import set_trace;
+    #     set_trace()
+
+
+def test_env_use_true_dynamic():
+
+    # import gym
+
+    env, dt_from_xml = create_env('MB_FetchPush-v1')
+    # env, dt_from_xml = create_env('pddm_cube-v0')
+    from ipdb import set_trace;
+    set_trace()
+
+    obs, start_state = env.reset(return_start_state=True)  #### reset() in mb_env.py ####
+    for i in range(2000):
+        # starting_ob = env.reset()  #### reset() in mb_env.py ####
+        obs = env.reset(reset_state=start_state)  #### reset() in mb_env.py ####
+        print(obs['observation'],'\n', start_state[0][1])
+        for t in range(100):
+            env.env.render()
+            a = env.env.action_space.sample()
+            o, r, done, env_info = env.step(a)  #### step() in mb_env.py  ####
+            # if done:
+            #     print('done in i and t:', done, i, t)
+            #     break
+
+        from ipdb import set_trace;
+        set_trace()
+
 if __name__ == '__main__':
+    # test_env()
+    # test_env_use_true_dynamic()
     main()

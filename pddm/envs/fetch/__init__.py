@@ -12,14 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pddm.envs.cheetah
-import pddm.envs.ant
-import pddm.envs.dclaw
-import pddm.envs.baoding
-import pddm.envs.cube
+from gym.envs.registration import register
 
-import pddm.envs.fetch_env
-import pddm.envs.fetch.slide
-import pddm.envs.fetch.pick_and_place
-import pddm.envs.fetch.push
-import pddm.envs.fetch.reach
+register(
+    id='MB_FetchSlideEnv-v1',
+    entry_point='pddm.envs.fetch.slide:FetchSlideEnv',
+    max_episode_steps=50,
+)
+
+register(
+    id='MB_FetchPush-v1',
+    entry_point='pddm.envs.fetch.push:FetchPushEnv',
+    max_episode_steps=50,
+)
+
+register(
+    id='MB_FetchPickAndPlaceEnv-v1',
+    entry_point='pddm.envs.fetch.pick_and_place:FetchPickAndPlaceEnv',
+    max_episode_steps=50,
+)
+
+register(
+    id='MB_FetchReachEnv-v1',
+    entry_point='pddm.envs.fetch.reach:FetchReachEnv',
+    max_episode_steps=50,
+)
+

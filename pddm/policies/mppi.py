@@ -63,6 +63,7 @@ class MPPI(object):
         ## how each sim's score compares to the best score
         ##########################
         S = np.exp(self.mppi_kappa * (scores - np.max(scores)))  # [N,]
+        print('S',S)
         denom = np.sum(S) + 1e-10
 
         ##########################
@@ -165,9 +166,15 @@ class MPPI(object):
         ### evaluate the predicted trajectories
         ############################
 
+        # from ipdb import set_trace;
+        # set_trace()
+
         # calculate costs [N,]
         costs, mean_costs, std_costs = calculate_costs(resulting_states_list, all_samples,
                                 self.reward_func, evaluating, take_exploratory_actions)
+
+        # print('mean_costs',mean_costs)
+        # print('std_costs',std_costs)
 
         # uses all paths to update action mean (for horizon steps)
         # Note: mppi_update needs rewards, so pass in -costs
@@ -178,37 +185,37 @@ class MPPI(object):
         ### instead of just on the model
         ### useful for debugging/analysis...
         #########################################
-        if self.execute_sideRollouts:
-            if (step_number % self.horizon)==0:
-                cmap = plt.get_cmap('jet_r')
-                num_sims = 5
-                indices_to_vis = [0, 1, 2, 3, 4, 6, -3, -2]
-                curr_plot = 1
-                num_plots = len(indices_to_vis)
-                for index_state_to_vis in indices_to_vis:
-                    plt.subplot(num_plots, 1, curr_plot)
-                    plt.ylabel(index_state_to_vis)
-                    for sim_num in range(num_sims):
-                        true_states = do_groundtruth_rollout(
-                            all_samples[sim_num], self.env,
-                            starting_fullenvstate, actions_taken_so_far)
-                        color = cmap(float(sim_num) / num_sims)
-
-                        ###if(step_number%10==0):
-                        plt.plot(
-                            resulting_states_list[-1]
-                            [:, sim_num, index_state_to_vis],
-                            '--',
-                            c=color,
-                            label=sim_num)
-                        plt.plot(
-                            np.array(true_states)[:, index_state_to_vis],
-                            '-',
-                            c=color)
-                    curr_plot += 1
-
-                if self.plot_sideRollouts:
-                    plt.legend()
-                    plt.show()
+        # if self.execute_sideRollouts:
+        #     if (step_number % self.horizon)==0:
+        #         cmap = plt.get_cmap('jet_r')
+        #         num_sims = 5
+        #         indices_to_vis = [0, 1, 2, 3, 4, 6, -3, -2]
+        #         curr_plot = 1
+        #         num_plots = len(indices_to_vis)
+        #         for index_state_to_vis in indices_to_vis:
+        #             plt.subplot(num_plots, 1, curr_plot)
+        #             plt.ylabel(index_state_to_vis)
+        #             for sim_num in range(num_sims):
+        #                 true_states = do_groundtruth_rollout(
+        #                     all_samples[sim_num], self.env,
+        #                     starting_fullenvstate, actions_taken_so_far)
+        #                 color = cmap(float(sim_num) / num_sims)
+        #
+        #                 ###if(step_number%10==0):
+        #                 plt.plot(
+        #                     resulting_states_list[-1]
+        #                     [:, sim_num, index_state_to_vis],
+        #                     '--',
+        #                     c=color,
+        #                     label=sim_num)
+        #                 plt.plot(
+        #                     np.array(true_states)[:, index_state_to_vis],
+        #                     '-',
+        #                     c=color)
+        #             curr_plot += 1
+        #
+        #         if self.plot_sideRollouts:
+        #             plt.legend()
+        #             plt.show()
 
         return selected_action, resulting_states_list

@@ -15,6 +15,10 @@
 import numpy as np
 
 def cost_per_step(pt, prev_pt, costs, actions, dones, reward_func):
+
+    # from ipdb import set_trace;
+    # set_trace()
+
     step_rews, step_dones = reward_func(pt, actions)
 
     dones = np.logical_or(dones, step_dones)
@@ -106,6 +110,9 @@ def calculate_costs(resulting_states_list, actions, reward_func,
     #mean and std cost (across ensemble) [N,]
     mean_cost = np.mean(new_costs, 1)
     std_cost = np.std(new_costs, 1)
+
+    # from ipdb import set_trace;
+    # set_trace()
 
     #rank by rewards
     if evaluating:
