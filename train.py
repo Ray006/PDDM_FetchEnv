@@ -22,9 +22,6 @@ import sys
 import argparse
 import traceback
 
-from ipdb import set_trace;
-set_trace()
-
 #my imports
 from pddm.policies.policy_random import Policy_Random
 from pddm.utils.helper_funcs import *

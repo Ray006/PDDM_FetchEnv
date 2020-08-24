@@ -78,7 +78,7 @@ class MPPI(object):
         ##########################
         return self.mppi_mean[0]
 
-    def get_action(self, step_number, curr_state_K, actions_taken_so_far,
+    def get_action(self, step_number, curr_state_K, goal, actions_taken_so_far,
                    starting_fullenvstate, evaluating, take_exploratory_actions):
 
         # init vars
@@ -170,7 +170,7 @@ class MPPI(object):
         # set_trace()
 
         # calculate costs [N,]
-        costs, mean_costs, std_costs = calculate_costs(resulting_states_list, all_samples,
+        costs, mean_costs, std_costs = calculate_costs(resulting_states_list, goal, all_samples,
                                 self.reward_func, evaluating, take_exploratory_actions)
 
         # print('mean_costs',mean_costs)

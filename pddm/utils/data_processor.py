@@ -35,6 +35,7 @@ class DataProcessor:
         self.duplicateData_switchObjs = duplicateData_switchObjs
         self.indices_for_switching = indices_for_switching
 
+
     def get_normalization_data(self):
         return self.normalization_data
 

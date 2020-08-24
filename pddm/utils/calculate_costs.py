@@ -14,12 +14,12 @@
 
 import numpy as np
 
-def cost_per_step(pt, prev_pt, costs, actions, dones, reward_func):
+def cost_per_step(pt, prev_pt, goal, costs, actions, dones, reward_func):
 
     # from ipdb import set_trace;
     # set_trace()
 
-    step_rews, step_dones = reward_func(pt, actions)
+    step_rews, step_dones = reward_func(pt, goal, actions)
 
     dones = np.logical_or(dones, step_dones)
     costs[dones > 0] += 500
@@ -28,7 +28,7 @@ def cost_per_step(pt, prev_pt, costs, actions, dones, reward_func):
     return costs, dones
 
 
-def calculate_costs(resulting_states_list, actions, reward_func,
+def calculate_costs(resulting_states_list, goal, actions, reward_func,
                     evaluating, take_exploratory_actions):
     """Rank various predicted trajectories (by cost)
 
@@ -81,6 +81,18 @@ def calculate_costs(resulting_states_list, actions, reward_func,
     prev_pt = resulting_states[0]
     dones = np.zeros((N * len(resulting_states_list),))
 
+    tiled_goal = np.tile(goal, (prev_pt.shape[0],1))
+
+    # n,m = tiled_goal.shape
+    # variance = 0.1
+    # sampled_goal = tiled_goal + np.random.randn(n,m)*variance
+    # use_sampled_goal = False
+    # if use_sampled_goal:
+    #     tiled_goal = sampled_goal
+
+    # from ipdb import set_trace;
+    # set_trace()
+
     #accumulate cost over each timestep
     for pt_number in range(len(resulting_states_list[0]) - 1):
 
@@ -88,7 +100,7 @@ def calculate_costs(resulting_states_list, actions, reward_func,
         pt = resulting_states[pt_number + 1]
         #update cost at the next timestep of the H-step rollout
         actions_per_step = tiled_actions[:, pt_number]
-        costs, dones = cost_per_step(pt, prev_pt, costs, actions_per_step, dones, reward_func)
+        costs, dones = cost_per_step(pt, prev_pt, tiled_goal, costs, actions_per_step, dones, reward_func)
         #update
         prev_pt = np.copy(pt)
 

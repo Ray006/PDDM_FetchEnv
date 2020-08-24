@@ -57,14 +57,15 @@ class DataPerIter:
 #                  desired_goal=np.array([]),
 #                  actions=np.array([]),
 #                  rewards_per_step=None,
+#                  info=None,
 #                  starting_state=None):
-#         self.states = observations.copy()
+#         self.obs = observations.copy()
 #         self.ag = achieved_goal.copy()
-#         self.goal = desired_goal.copy()
-#         self.actions = actions.copy()
+#         self.g = desired_goal.copy()
+#         self.a = actions.copy()
 #         self.rewards_per_step = rewards_per_step
+#         self.info = info
 #         self.starting_state = starting_state
-
 
 class Rollout:
 
@@ -72,11 +73,30 @@ class Rollout:
                  observations=np.array([]),
                  actions=np.array([]),
                  rewards_per_step=None,
-                 starting_state=None):
+                 starting_state=None,
+                 achieved_goals=np.array([]),
+                 desired_goals=np.array([]),
+                 info=None):
         self.states = observations.copy()
         self.actions = actions.copy()
         self.rewards_per_step = rewards_per_step##.copy()
         self.starting_state = starting_state
+
+        self.ag = achieved_goals.copy()
+        self.g = desired_goals.copy()
+        self.info = info
+
+# class Rollout:
+#
+#     def __init__(self,
+#                  observations=np.array([]),
+#                  actions=np.array([]),
+#                  rewards_per_step=None,
+#                  starting_state=None):
+#         self.states = observations.copy()
+#         self.actions = actions.copy()
+#         self.rewards_per_step = rewards_per_step##.copy()
+#         self.starting_state = starting_state
 
 #######################
 

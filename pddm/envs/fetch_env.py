@@ -56,7 +56,7 @@ class FetchEnv(robot_env.RobotEnv):
         # Compute distance between goal and the achieved goal.
         d = goal_distance(achieved_goal, goal)
 
-        self.reward_type = 0  ##### test
+        # self.reward_type = 0  ##### test
 
         if self.reward_type == 'sparse':
             return -(d > self.distance_threshold).astype(np.float32)
@@ -65,7 +65,7 @@ class FetchEnv(robot_env.RobotEnv):
 
     # Added by Ray get_reward() and get_score()
     # ----------------------------
-    def get_reward(self, observations, actions):
+    def get_reward(self, observations, goal, actions):
 
         if not self.has_object:
             ag_index = 0
@@ -74,12 +74,19 @@ class FetchEnv(robot_env.RobotEnv):
 
         if np.ndim(observations)==2:
             achieved_goal = observations[:,ag_index:ag_index+3]
-            desired_goal = observations[:,-3:]
+            desired_goal = goal
+            # desired_goal = observations[:,-3:]
             dones = np.zeros((observations.shape)[0]) # this task is never terminated
+
+            # print('goal:',goal[0])
+            # print('obs-3:',observations[:,-3:])
+            print(goal == observations[:,-3:])
         else:
             achieved_goal = observations[ag_index:ag_index+3]
-            desired_goal = observations[-3:]
+            desired_goal = goal
+            # desired_goal = observations[-3:]
             dones = 0  # this task is never terminated
+
 
         reward = self.compute_reward(achieved_goal, desired_goal)
 

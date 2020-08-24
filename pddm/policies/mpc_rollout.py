@@ -140,7 +140,7 @@ class MPCRollout:
             ag.append(state_dict['achieved_goal'])
             g.append(state_dict['desired_goal'])
 
-            curr_state = np.concatenate((obs[-1],g[-1]))
+            curr_state = obs[-1]
             curr_state_K = [curr_state]  # not K yet, but will be
 
         else:
@@ -196,7 +196,7 @@ class MPCRollout:
                 best_action, _ = self.rand_policy.get_action(None, None)
             else:
                 best_action, predicted_states_list = get_action(
-                    step, curr_state_K, actions_taken, starting_fullenvstate,
+                    step, curr_state_K, g[0], actions_taken, starting_fullenvstate,
                     self.evaluating, take_exploratory_actions)
 
             #noise the action, as needed
@@ -225,7 +225,7 @@ class MPCRollout:
                 obs.append(state_dict['observation'])
                 ag.append(state_dict['achieved_goal'])
                 g.append(state_dict['desired_goal'])
-                next_state = np.concatenate((obs[-1], g[-1]))
+                next_state = obs[-1]
 
             #################################################
             #### get predicted next_state

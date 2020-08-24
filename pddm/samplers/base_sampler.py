@@ -71,6 +71,7 @@ def do_rollout(N_percpu,
                 obs = o['observation']
                 g = o['desired_goal']
                 curr_state = np.concatenate((obs, g))
+                # curr_state = obs
                 observations.append(curr_state)
             else:
                 observations.append(o)
@@ -88,6 +89,7 @@ def do_rollout(N_percpu,
             obs = o['observation']
             g = o['desired_goal']
             curr_state = np.concatenate((obs, g))
+            # curr_state = obs
             observations.append(curr_state)
         else:
             observations.append(o)
