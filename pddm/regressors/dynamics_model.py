@@ -192,8 +192,8 @@ class Dyn_Model:
 
             # from ipdb import set_trace;
             # set_trace()
-            sum_training_loss=1+sum_training_loss
-            num_training_batches=1+num_training_batches
+            # sum_training_loss=1+sum_training_loss
+            # num_training_batches=1+num_training_batches
 
             mean_training_loss = sum_training_loss / num_training_batches
 

@@ -53,7 +53,7 @@
 ## collect random rollouts
 'load_existing_random_data': [False],
 'num_rand_rollouts_train': [30],
-'num_rand_rollouts_val': [10],
+'num_rand_rollouts_val': [30],
 'rand_rollout_length': [50],
 'use_threading': [True],
 
@@ -97,6 +97,6 @@
 ## mppi
 'mppi_kappa': [10],
 'mppi_mag_noise': [0.9],
-'mppi_beta': [0.6],
+'mppi_beta': [0.7],
 
 }

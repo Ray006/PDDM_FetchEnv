@@ -305,6 +305,9 @@ def visualize_rendering(rollout_info,
             plt.plot(plotting_list)
             plt.pause(0.1)
 
+        # from ipdb import set_trace;
+        # set_trace()
+
         if action.shape[0] == 1:
             next_state, rew, done, env_info = env.step(action[0])
         else:

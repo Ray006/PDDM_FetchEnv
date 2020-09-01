@@ -22,8 +22,8 @@ import sys
 import argparse
 import traceback
 
-from ipdb import set_trace;
-set_trace()
+# from ipdb import set_trace;
+# set_trace()
 
 #my imports
 from pddm.policies.policy_random import Policy_Random
@@ -132,7 +132,7 @@ def run_job(args, save_dir=None):
 
             ######################### ker #################################
             id = args.env_name
-            n_KER = 8
+            n_KER = 3
             if n_KER:
                 from pddm.data_augmentation.ker_learning_method import ker_learning
                 KER = ker_learning(id, n_KER)
@@ -553,7 +553,7 @@ def main():
          'working directory'))
 
     parser.add_argument('--use_gpu', action="store_true")
-    parser.add_argument('-frac', '--gpu_frac', type=float, default=0.9)
+    parser.add_argument('-frac', '--gpu_frac', type=float, default=0.7)
     general_args = parser.parse_args()
 
     #####################
@@ -613,6 +613,28 @@ def test_env():
     set_trace()
     import gym
 
+    env, dt_from_xml = create_env('MB_FetchPush-v1')
+    high = env.env.action_space.high
+    low = env.env.action_space.low
+
+    for i in range(2000):
+        env.reset()                 #### reset() in mb_env.py ####
+        a = env.env.action_space.sample()
+        a = np.zeros_like(a)
+        for j in range(10):
+            for t in range(10):
+                print(a)
+                o, r, done, env_info = env.step(a)  #### step() in mb_env.py  ####
+                env.env.render()
+                # if done:
+                #     print('done in i and t:',done,i,t)
+                #     break
+            a[0] += 0.1
+
+
+        from ipdb import set_trace;
+        set_trace()
+
     #################### v1 ########################
     # env = gym.make('MB_FetchPush-v1')
     #
@@ -643,20 +665,20 @@ def test_env():
     #     set_trace()
     #
 
-    env, dt_from_xml = create_env('MB_FetchPush-v1')
-
-    for i in range(2000):
-        env.reset()                 #### reset() in mb_env.py ####
-        for t in range(100):
-            a = env.env.action_space.sample()
-            o, r, done, env_info = env.step(a)  #### step() in mb_env.py  ####
-            env.env.render()
-            if done:
-                print('done in i and t:',done,i,t)
-                break
-
-        from ipdb import set_trace;
-        set_trace()
+    # env, dt_from_xml = create_env('MB_FetchPush-v1')
+    #
+    # for i in range(2000):
+    #     env.reset()                 #### reset() in mb_env.py ####
+    #     for t in range(100):
+    #         a = env.env.action_space.sample()
+    #         o, r, done, env_info = env.step(a)  #### step() in mb_env.py  ####
+    #         env.env.render()
+    #         if done:s
+    #             print('done in i and t:',done,i,t)
+    #             break
+    #
+    #     from ipdb import set_trace;
+    #     set_trace()
 
 
     #################### v4 used in the code ########################
@@ -738,5 +760,5 @@ def test_env_use_true_dynamic():
 
 if __name__ == '__main__':
     # test_env()
-    test_env_use_true_dynamic()
+    # test_env_use_true_dynamic()
     main()

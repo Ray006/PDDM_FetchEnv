@@ -27,9 +27,9 @@
 
 ## env
 'env_name': ['MB_FetchPush-v1'],
-'rollout_length': [50],
+'rollout_length': [30],
 'num_iters': [200],
-'num_trajectories_per_iter': [1],
+'num_trajectories_per_iter': [2],
 
 ## continue
 'continue_run': [-1],
@@ -86,7 +86,7 @@
 ##########################
 
 ## MPC
-'horizon': [10],
+'horizon': [7],
 'num_control_samples': [500],
 'controller_type': ['mppi'],
 

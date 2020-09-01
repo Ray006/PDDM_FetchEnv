@@ -9,7 +9,6 @@ def goal_distance(goal_a, goal_b):
     assert goal_a.shape == goal_b.shape
     return np.linalg.norm(goal_a - goal_b, axis=-1)
 
-
 class FetchEnv(robot_env.RobotEnv):
     """Superclass for all Fetch environments.
     """
@@ -49,14 +48,38 @@ class FetchEnv(robot_env.RobotEnv):
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
 
+####### for taking notes
+    # def goal_distance(self, goal_a, goal_b):
+    #     assert goal_a.shape == goal_b.shape
+    #     return np.linalg.norm(goal_a - goal_b, axis=-1)
+    #
+    # def compute_reward(self, achieved_goal, goal, info=None):
+    #     d = self.goal_distance(achieved_goal, goal)
+    #     if self.reward_type == 'sparse':
+    #         return -(d > self.distance_threshold).astype(np.float32)
+    #     else:
+    #         return -d
+    #
+    # def get_reward(self, grip_p, achieved_goal, desired_goal, actions):
+    #
+    #     reward1 = self.compute_reward(grip_p, desired_goal)        ## grip -> to goal
+    #     reward2 = self.compute_reward(grip_p, achieved_goal)       ## grip -> to object
+    #     reward3 = self.compute_reward(achieved_goal, desired_goal) ## object -> to goal
+    #
+    #     # reward = reward2*10 + reward3   ### just pushed the object without being aware of the goal.
+    #     reward = reward2 + reward3 * 10   ### still testing
+    #
+    #     return reward
+
+
     # GoalEnv methods
     # ----------------------------
-
+    # sparse or no sparse defined by gym
     def compute_reward(self, achieved_goal, goal, info=None):
         # Compute distance between goal and the achieved goal.
         d = goal_distance(achieved_goal, goal)
 
-        # self.reward_type = 0  ##### test
+        self.reward_type = 'dense'  ##### test
 
         if self.reward_type == 'sparse':
             return -(d > self.distance_threshold).astype(np.float32)
@@ -65,40 +88,219 @@ class FetchEnv(robot_env.RobotEnv):
 
     # Added by Ray get_reward() and get_score()
     # ----------------------------
-    def get_reward(self, observations, goal, actions):
+    def get_reward(self, observations, goal, actions):    ###### V5, grip -> to goal or to object, dense
 
         if not self.has_object:
             ag_index = 0
         else:
             ag_index = 3
 
-        if np.ndim(observations)==2:
+        if np.ndim(observations)==2:       # for the planner to select actions
+            grip_p = observations[:,0:3]
             achieved_goal = observations[:,ag_index:ag_index+3]
             desired_goal = goal
-            # desired_goal = observations[:,-3:]
             dones = np.zeros((observations.shape)[0]) # this task is never terminated
 
-            # print('goal:',goal[0])
-            # print('obs-3:',observations[:,-3:])
-            print(goal == observations[:,-3:])
-        else:
+
+            d_grip_ag = goal_distance(grip_p, achieved_goal)
+            d_grip_g = goal_distance(grip_p, desired_goal)
+            d_ag_g = goal_distance(achieved_goal, desired_goal)
+
+            reward = -0.1 * d_grip_ag  # take hand to object
+            reward += -0.5 * d_grip_g  # make hand go to target
+            reward += -0.5 * d_ag_g  # make object go to target
+
+            index = np.array([i for i in range(np.size(d_grip_ag))])
+            reward[index[d_ag_g < self.distance_threshold*2]]+=10     # bonus for object close to target
+            reward[index[d_ag_g < self.distance_threshold]]+=20     ## bonus for object "very" close to target
+
+
+        else:      # for the real reward when interacting with the environment.
+            grip_p = observations[0:3]
             achieved_goal = observations[ag_index:ag_index+3]
             desired_goal = goal
-            # desired_goal = observations[-3:]
             dones = 0  # this task is never terminated
 
+            d_grip_ag = goal_distance(grip_p, achieved_goal)
+            d_grip_g = goal_distance(grip_p, desired_goal)
+            d_ag_g = goal_distance(achieved_goal, desired_goal)
 
-        reward = self.compute_reward(achieved_goal, desired_goal)
+            reward = -0.1 * d_grip_ag  # take hand to object
+            reward += -0.5 * d_grip_g  # make hand go to target
+            reward += -0.5 * d_ag_g  # make object go to target
+            if d_ag_g < 0.1:
+                reward += 10.0  # bonus for object close to target
+            if d_ag_g < self.distance_threshold:
+                reward += 20.0  # bonus for object "very" close to target
 
-        # obs:
-        # self.obs_dict['robot_pos'], #24
-        # self.obs_dict['object_position'], #3
-        # self.obs_dict['object_orientation'], #3
-        # self.obs_dict['object_velp'], #3
-        # self.obs_dict['object_velr'], #3
-        # self.obs_dict['desired_orientation'], #3
+
+        # reward1 = self.compute_reward(grip_p, desired_goal)  ## grip -> to goal
+        # reward2 = self.compute_reward(grip_p, achieved_goal)   ## grip -> to object
+        # reward3 = self.compute_reward(achieved_goal, desired_goal)  ## object -> to goal
+        # # reward = reward2*10 + reward3   ### just pushed the object without being aware of the goal.
+        # reward = reward2 + reward3*10
+
+        # from ipdb import set_trace;
+        # set_trace()
 
         return reward, dones
+
+    # # Added by Ray get_reward() and get_score()
+    # # ----------------------------
+    # def get_reward(self, observations, goal, actions):    ###### V4, grip -> to goal or to object, dense
+    #
+    #     if not self.has_object:
+    #         ag_index = 0
+    #     else:
+    #         ag_index = 3
+    #
+    #     if np.ndim(observations)==2:       # for the planner to select actions
+    #         grip_p = observations[:,0:3]
+    #         achieved_goal = observations[:,ag_index:ag_index+3]
+    #         desired_goal = goal
+    #         dones = np.zeros((observations.shape)[0]) # this task is never terminated
+    #
+    #
+    #         d_grip_ag = goal_distance(grip_p, achieved_goal)
+    #         d_ag_g = goal_distance(achieved_goal, desired_goal)
+    #
+    #         reward = -d_grip_ag
+    #         index = np.array([i for i in range(np.size(d_grip_ag))])
+    #         reward[index[d_grip_ag < self.distance_threshold*1.5]]=0     # if > threshold, get distance, else get 0.
+    #         reward[index[d_ag_g > self.distance_threshold]] += -d_ag_g[index[d_ag_g > self.distance_threshold]] # if > threshold, get distance, else get 0.
+    #
+    #     else:      # for the real reward when interacting with the environment.
+    #         grip_p = observations[0:3]
+    #         achieved_goal = observations[ag_index:ag_index+3]
+    #         desired_goal = goal
+    #         dones = 0  # this task is never terminated
+    #
+    #
+    #         d_grip_ag = goal_distance(grip_p, achieved_goal)
+    #         d_ag_g = goal_distance(achieved_goal, desired_goal)
+    #
+    #         # the same as below
+    #         if d_grip_ag > self.distance_threshold*1.5:
+    #             reward = - d_grip_ag
+    #         else:
+    #             reward = 0
+    #
+    #         if d_ag_g > self.distance_threshold:
+    #             reward += - d_grip_ag
+    #         else:
+    #             reward += 0
+    #
+    #     # reward1 = self.compute_reward(grip_p, desired_goal)  ## grip -> to goal
+    #     # reward2 = self.compute_reward(grip_p, achieved_goal)   ## grip -> to object
+    #     # reward3 = self.compute_reward(achieved_goal, desired_goal)  ## object -> to goal
+    #     # # reward = reward2*10 + reward3   ### just pushed the object without being aware of the goal.
+    #     # reward = reward2 + reward3*10
+    #
+    #     # from ipdb import set_trace;
+    #     # set_trace()
+    #
+    #     return reward, dones
+
+
+    # # Added by Ray get_reward() and get_score()
+    # # ----------------------------
+    # def get_reward(self, observations, goal, actions):    ###### V3, grip -> to goal or to object, dense
+    #
+    #     if not self.has_object:
+    #         ag_index = 0
+    #     else:
+    #         ag_index = 3
+    #
+    #     if np.ndim(observations)==2:
+    #         grip_p = observations[:,0:3]
+    #         achieved_goal = observations[:,ag_index:ag_index+3]
+    #         desired_goal = goal
+    #         dones = np.zeros((observations.shape)[0]) # this task is never terminated
+    #
+    #     else:
+    #         grip_p = observations[0:3]
+    #         achieved_goal = observations[ag_index:ag_index+3]
+    #         desired_goal = goal
+    #         dones = 0  # this task is never terminated
+    #
+    #     reward1 = self.compute_reward(grip_p, desired_goal)  ## grip -> to goal
+    #     reward2 = self.compute_reward(grip_p, achieved_goal)   ## grip -> to object
+    #     reward3 = self.compute_reward(achieved_goal, desired_goal)  ## object -> to goal
+    #     # reward = reward2*10 + reward3   ### just pushed the object without being aware of the goal.
+    #     reward = reward2 + reward3*10
+    #
+    #     # from ipdb import set_trace;
+    #     # set_trace()
+    #
+    #     return reward, dones
+
+
+    # # Added by Ray get_reward() and get_score()
+    # # ----------------------------
+    # def get_reward(self, observations, goal, actions):    ###### V2, dense rewards
+    #
+    #     if not self.has_object:
+    #         ag_index = 0
+    #     else:
+    #         ag_index = 3
+    #
+    #     if np.ndim(observations)==2:
+    #         grip_p = observations[:,0:3]
+    #         achieved_goal = observations[:,ag_index:ag_index+3]
+    #         desired_goal = goal
+    #         dones = np.zeros((observations.shape)[0]) # this task is never terminated
+    #
+    #     else:
+    #         grip_p = observations[0:3]
+    #         achieved_goal = observations[ag_index:ag_index+3]
+    #         desired_goal = goal
+    #         dones = 0  # this task is never terminated
+    #
+    #     reward = self.compute_reward(achieved_goal, desired_goal)
+    #
+    #     # dense reward
+    #     grip_ag = -goal_distance(grip_p, achieved_goal)
+    #     reward += grip_ag*0.1
+    #
+    #     return reward, dones
+
+
+    # # Added by Ray get_reward() and get_score()
+    # # ----------------------------
+    # def get_reward(self, observations, goal, actions):    ###### V1, just work
+    #
+    #     if not self.has_object:
+    #         ag_index = 0
+    #     else:
+    #         ag_index = 3
+    #
+    #     if np.ndim(observations)==2:
+    #         achieved_goal = observations[:,ag_index:ag_index+3]
+    #         desired_goal = goal
+    #         # desired_goal = observations[:,-3:]
+    #         dones = np.zeros((observations.shape)[0]) # this task is never terminated
+    #
+    #         # print('goal:',goal[0])
+    #         # print('obs-3:',observations[:,-3:])
+    #         # print(goal == observations[:,-3:])
+    #     else:
+    #         achieved_goal = observations[ag_index:ag_index+3]
+    #         desired_goal = goal
+    #         # desired_goal = observations[-3:]
+    #         dones = 0  # this task is never terminated
+    #
+    #
+    #     reward = self.compute_reward(achieved_goal, desired_goal)
+    #
+    #     # obs:
+    #     # self.obs_dict['robot_pos'], #24
+    #     # self.obs_dict['object_position'], #3
+    #     # self.obs_dict['object_orientation'], #3
+    #     # self.obs_dict['object_velp'], #3
+    #     # self.obs_dict['object_velr'], #3
+    #     # self.obs_dict['desired_orientation'], #3
+    #
+    #     return reward, dones
 
     def get_score(self, obs_dict):
         if not self.has_object:
@@ -147,8 +349,8 @@ class FetchEnv(robot_env.RobotEnv):
             # rotations
             object_rot = rotations.mat2euler(self.sim.data.get_site_xmat('object0'))
             # velocities
-            object_velp = self.sim.data.get_site_xvelp('object0') * dt
-            object_velr = self.sim.data.get_site_xvelr('object0') * dt
+            object_velp = self.sim.data.get_site_xvelp('object0') * dt  # position velocity
+            object_velr = self.sim.data.get_site_xvelr('object0') * dt  # rotation velocity
             # gripper state
             object_rel_pos = object_pos - grip_pos
             object_velp -= grip_velp
@@ -237,3 +439,4 @@ class FetchEnv(robot_env.RobotEnv):
         self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
         if self.has_object:
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
+

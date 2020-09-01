@@ -199,6 +199,9 @@ class MPCRollout:
                     step, curr_state_K, g[0], actions_taken, starting_fullenvstate,
                     self.evaluating, take_exploratory_actions)
 
+            # from ipdb import set_trace;
+            # set_trace()
+
             #noise the action, as needed
             action_to_take = np.copy(best_action)
             clean_action = np.copy(action_to_take)
@@ -219,6 +222,15 @@ class MPCRollout:
             #### execute the action
             ########################
             next_state, rew, done, env_info = self.env.step(action_to_take)
+
+            # we don't need the original reward, but need my reward function outputs.
+            test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
+            rew = test_reward
+
+            if self.use_ground_truth_dynamics:
+                # test_reward = self.env.unwrapped_env.compute_reward(next_state['observation'][0:3], next_state['desired_goal'])
+                test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
+                print("done step ", step, ", test_reward: ", test_reward)
 
             if isinstance(next_state, dict):
                 state_dict = next_state
@@ -284,9 +296,8 @@ class MPCRollout:
             actions_taken_K.append(acs_K)
 
             if not self.print_minimal:
-                if (step % 100 == 0):
-                    print("done step ", step, ", rew: ",
-                          total_reward_for_episode)
+                if (step % 10 == 0):
+                    print("done step ", step, ", rew: ", total_reward_for_episode)
 
             #update
             step += 1

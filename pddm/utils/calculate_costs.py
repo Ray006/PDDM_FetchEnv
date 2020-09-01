@@ -27,7 +27,7 @@ def cost_per_step(pt, prev_pt, goal, costs, actions, dones, reward_func):
 
     return costs, dones
 
-
+missing_rate = 1.0
 def calculate_costs(resulting_states_list, goal, actions, reward_func,
                     evaluating, take_exploratory_actions):
     """Rank various predicted trajectories (by cost)
@@ -83,12 +83,15 @@ def calculate_costs(resulting_states_list, goal, actions, reward_func,
 
     tiled_goal = np.tile(goal, (prev_pt.shape[0],1))
 
-    # n,m = tiled_goal.shape
-    # variance = 0.1
-    # sampled_goal = tiled_goal + np.random.randn(n,m)*variance
-    # use_sampled_goal = False
-    # if use_sampled_goal:
-    #     tiled_goal = sampled_goal
+    use_sampled_goal = False
+    # use_sampled_goal = True
+
+    if use_sampled_goal:
+        global missing_rate
+        change = 0.01
+        n,m = tiled_goal.shape
+        variance = 0.1 * missing_rate  # if missing_rate=100%, means all action sequences are failed, need a larger variance.
+        sampled_goal = tiled_goal + np.random.randn(n,m)*variance
 
     # from ipdb import set_trace;
     # set_trace()
@@ -100,6 +103,13 @@ def calculate_costs(resulting_states_list, goal, actions, reward_func,
         pt = resulting_states[pt_number + 1]
         #update cost at the next timestep of the H-step rollout
         actions_per_step = tiled_actions[:, pt_number]
+
+        if use_sampled_goal:            #G2
+            pre_ag = prev_pt[:,3:6]
+            ag = pt[:,3:6]
+            index = (np.linalg.norm((ag - pre_ag),axis=1) > change)
+            tiled_goal[index] = sampled_goal[index]
+
         costs, dones = cost_per_step(pt, prev_pt, tiled_goal, costs, actions_per_step, dones, reward_func)
         #update
         prev_pt = np.copy(pt)
@@ -113,6 +123,9 @@ def calculate_costs(resulting_states_list, goal, actions, reward_func,
     #"model disagreement" over ensemble predictions (for a given action sequence A)
     ###########################################################
 
+    # from ipdb import set_trace;
+    # set_trace()
+
     #consolidate costs (ensemble_size*N) --> (N)
     new_costs = []
     for i in range(N):
@@ -122,6 +135,11 @@ def calculate_costs(resulting_states_list, goal, actions, reward_func,
     #mean and std cost (across ensemble) [N,]
     mean_cost = np.mean(new_costs, 1)
     std_cost = np.std(new_costs, 1)
+
+    if use_sampled_goal:
+        _, H, _ = actions.shape  # get horizon lenth
+        missing_rate = len(mean_cost[mean_cost == H]) / len(mean_cost)
+        print('missing_rate:', missing_rate)
 
     # from ipdb import set_trace;
     # set_trace()

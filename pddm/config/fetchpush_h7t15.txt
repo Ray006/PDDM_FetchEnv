@@ -27,7 +27,7 @@
 
 ## env
 'env_name': ['MB_FetchPush-v1'],
-'rollout_length': [50],
+'rollout_length': [15],
 'num_iters': [200],
 'num_trajectories_per_iter': [1],
 
@@ -36,8 +36,8 @@
 'continue_run_filepath': [''],
 
 ## some T/F options
-'use_ground_truth_dynamics': [False],
-'visualize_MPC_rollout': [False],
+'use_ground_truth_dynamics': [True],
+'visualize_MPC_rollout': [True],
 'print_minimal': [False],
 
 ## noise
