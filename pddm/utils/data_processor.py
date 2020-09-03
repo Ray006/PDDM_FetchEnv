@@ -152,6 +152,9 @@ class DataProcessor:
                 all_actions_K.append(actions[step - K:step])
                 all_differences_single.append(states[step] - states[step - 1])
 
+        # from ipdb import set_trace;
+        # set_trace()
+
         #training labels:
         dataZ = np.array(all_differences_single)
 

@@ -119,21 +119,23 @@ def run_job(args, save_dir=None):
             if args.load_existing_random_data:
                 rollouts_trainRand, rollouts_valRand = loader.load_initialData()
             else:
-
+                self_model = True
                 #training
                 rollouts_trainRand = collect_random_rollouts(
                     env, random_policy, args.num_rand_rollouts_train,
-                    args.rand_rollout_length, dt_from_xml, args)
+                    args.rand_rollout_length, dt_from_xml, args, self_model=self_model)
                 #validation
                 rollouts_valRand = collect_random_rollouts(
                     env, random_policy, args.num_rand_rollouts_val,
-                    args.rand_rollout_length, dt_from_xml, args)
+                    args.rand_rollout_length, dt_from_xml, args, self_model=self_model)
 
+            # from ipdb import set_trace;
+            # set_trace()
 
             ######################### ker #################################
             id = args.env_name
             n_KER = 3
-            if n_KER:
+            if n_KER:  # 1th
                 from pddm.data_augmentation.ker_learning_method import ker_learning
                 KER = ker_learning(id, n_KER)
 
@@ -214,7 +216,7 @@ def run_job(args, save_dir=None):
         dyn_models = Dyn_Model(inputSize, outputSize, acSize, sess, params=args)
 
         mpc_rollout = MPCRollout(env, dyn_models, random_policy,
-                                 execute_sideRollouts, plot_sideRollouts, args)
+                                 execute_sideRollouts, plot_sideRollouts, args, self_model = self_model)
 
         ### init TF variables
         sess.run(tf.global_variables_initializer())
@@ -345,7 +347,7 @@ def run_job(args, save_dir=None):
                     inputs_val=inputs_val,
                     outputs_val=outputs_val,
                     inputs_val_onPol=inputs_val_onPol,
-                    outputs_val_onPol=outputs_val_onPol)
+                    outputs_val_onPol=outputs_val_onPol,)
 
             #saving rollout info
             rollouts_info = []
@@ -368,18 +370,29 @@ def run_job(args, save_dir=None):
                     print("\n####################### Performing MPC rollout #",
                           rollout_num)
 
-                # from ipdb import set_trace;
-                # set_trace()
+
 
                 #reset env randomly
                 starting_observation, starting_state = env.reset(return_start_state=True)
 
+                if self_model:
+                    n = len(dataset_trainRand.dataX)
+                    index = np.random.randint(0,n)
+                    sampled_state = dataset_trainRand.dataX[index][0]
+
+                    grip_pos = sampled_state[0:3]
+                    grip_velp = sampled_state[-5:-2]
+                    desired_goal = np.concatenate((grip_pos, grip_velp)) #need to change the goal, sample it from ....
+
+                # from ipdb import set_trace;
+                # set_trace()
 
                 rollout_info = mpc_rollout.perform_rollout(
                     starting_state,
                     starting_observation,
                     controller_type=args.controller_type,
-                    take_exploratory_actions=False)
+                    take_exploratory_actions=False,
+                    goal = desired_goal)
 
                 # Note: can sometimes set take_exploratory_actions=True
                 # in order to use ensemble disagreement for exploration
@@ -420,10 +433,10 @@ def run_job(args, save_dir=None):
             num_rand_rollouts = 5
             rollouts_rand = collect_random_rollouts(
                 env, random_policy, num_rand_rollouts, args.rollout_length,
-                dt_from_xml, args)
+                dt_from_xml, args, self_model=self_model)
 
             ######################### ker #################################
-            if n_KER:
+            if n_KER: # 2th
                 Data = rollouts_rand
                 rollouts_rand = []
                 for data in Data:
@@ -440,6 +453,9 @@ def run_job(args, save_dir=None):
             #convert (rollouts --> dataset)
             dataset_rand_new = data_processor.convertRolloutsToDatasets(
                 rollouts_rand)
+
+            # from ipdb import set_trace;
+            # set_trace()
 
             #concat this dataset with the existing dataset_trainRand
             dataset_trainRand = concat_datasets(dataset_trainRand,
@@ -466,7 +482,7 @@ def run_job(args, save_dir=None):
 
             ## here to reflect rollouts_train, but not the rollouts_val
             ######################### ker #################################
-            if n_KER:
+            if n_KER:   # 3th
                 Data = rollouts_train
                 rollouts_train = []
                 for data in Data:

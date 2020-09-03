@@ -20,7 +20,7 @@ from pddm.utils.data_structures import *
 
 class CollectSamples(object):
 
-    def __init__(self, env, policy, visualize_rollouts, dt_from_xml, is_random, random_sampling_params):
+    def __init__(self, env, policy, visualize_rollouts, dt_from_xml, is_random, random_sampling_params, self_model):
         self.env = env
         self.policy = policy
         self.rollouts = []
@@ -33,6 +33,8 @@ class CollectSamples(object):
         self.dt_from_xml = dt_from_xml
         self.is_random = is_random
         self.random_sampling_params = random_sampling_params
+
+        self.self_model = self_model
 
 
     def collect_samples(self, num_rollouts, steps_per_rollout):
@@ -74,7 +76,11 @@ class CollectSamples(object):
         if isinstance(observation, dict):       # if the observation is a dict
 
             state_dict = observation
-            obs.append(state_dict['observation'])
+            if self.self_model:
+                mixed_obs = state_dict['observation']
+                obs.append(np.concatenate((mixed_obs[:3],mixed_obs[9:11],mixed_obs[-5:])))
+            else:
+                obs.append(state_dict['observation'])
             ag.append(state_dict['achieved_goal'])
             g.append(state_dict['desired_goal'])
             o = obs[-1]
@@ -102,7 +108,11 @@ class CollectSamples(object):
 
             if isinstance(next_observation, dict):
                 state_dict = next_observation
-                obs.append(state_dict['observation'])
+                if self.self_model:
+                    mixed_obs = state_dict['observation']
+                    obs.append(np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:])))
+                else:
+                    obs.append(state_dict['observation'])
                 ag.append(state_dict['achieved_goal'])
                 g.append(state_dict['desired_goal'])
                 o = obs[-1]

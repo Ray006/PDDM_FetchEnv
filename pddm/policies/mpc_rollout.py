@@ -31,7 +31,8 @@ class MPCRollout:
                  execute_sideRollouts,
                  plot_sideRollouts,
                  params,
-                 evaluating=False):
+                 evaluating=False,
+                 self_model = False):
 
         #init vars
         self.env = env
@@ -48,6 +49,7 @@ class MPCRollout:
         self.noise_amount = 0.005
 
         self.reward_func = env.unwrapped_env.get_reward
+        self.self_model = self_model
 
         #init controllers
         self.controller_randshooting = RandomShooting(
@@ -66,7 +68,8 @@ class MPCRollout:
                         starting_observation,
                         controller_type,
                         take_exploratory_actions=False,
-                        isRandom=False):
+                        isRandom=False,
+                        goal = None):
         """
         Args:
             starting_fullenvstate: full state of the mujoco env (enough to allow resetting to it)
@@ -136,7 +139,11 @@ class MPCRollout:
         if isinstance(starting_observation, dict):
             obs, ag, g, successes = [], [], [], []
             state_dict = starting_observation
-            obs.append(state_dict['observation'])
+            if self.self_model:
+                mixed_obs = state_dict['observation']
+                obs.append(np.concatenate((mixed_obs[:3],mixed_obs[9:11],mixed_obs[-5:])))
+            else:
+                obs.append(state_dict['observation'])
             ag.append(state_dict['achieved_goal'])
             g.append(state_dict['desired_goal'])
 
@@ -178,6 +185,10 @@ class MPCRollout:
         #######################################
         #### loop over steps in rollout
         #######################################
+        if goal is not None:
+            goal = np.concatenate((g[0],goal[-3:]))
+        else:
+            goal = g[0]
 
         done = False
         while not(done or step>=self.rollout_length):
@@ -196,7 +207,7 @@ class MPCRollout:
                 best_action, _ = self.rand_policy.get_action(None, None)
             else:
                 best_action, predicted_states_list = get_action(
-                    step, curr_state_K, g[0], actions_taken, starting_fullenvstate,
+                    step, curr_state_K, goal, actions_taken, starting_fullenvstate,
                     self.evaluating, take_exploratory_actions)
 
             # from ipdb import set_trace;
@@ -224,8 +235,8 @@ class MPCRollout:
             next_state, rew, done, env_info = self.env.step(action_to_take)
 
             # we don't need the original reward, but need my reward function outputs.
-            test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
-            rew = test_reward
+            # test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
+            # rew = test_reward
 
             if self.use_ground_truth_dynamics:
                 # test_reward = self.env.unwrapped_env.compute_reward(next_state['observation'][0:3], next_state['desired_goal'])
@@ -234,10 +245,19 @@ class MPCRollout:
 
             if isinstance(next_state, dict):
                 state_dict = next_state
-                obs.append(state_dict['observation'])
+                if self.self_model:
+                    mixed_obs = state_dict['observation']
+                    obs.append(np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:])))
+                else:
+                    obs.append(state_dict['observation'])
                 ag.append(state_dict['achieved_goal'])
                 g.append(state_dict['desired_goal'])
                 next_state = obs[-1]
+
+                if self.self_model:
+                    test_reward, done = self.env.unwrapped_env.get_reward(next_state, curr_state_K[0], goal, None)
+                    rew = test_reward
+
 
             #################################################
             #### get predicted next_state
@@ -306,9 +326,16 @@ class MPCRollout:
         ##### save and return
         ##########################
 
+        # from ipdb import set_trace;
+        # set_trace()
+
         if not self.print_minimal:
             print("DONE TAKING ", step, " STEPS.")
             print("Total reward: ", total_reward_for_episode)
+
+            np.set_printoptions(formatter={'float':'{:0.5f}'.format})
+            print("ag:",np.concatenate((traj_taken[-1][:3],traj_taken[-1][-5:-2])))
+            print("g :",goal)
 
         rollout_info = dict(
             starting_state=starting_fullenvstate,

@@ -194,7 +194,8 @@ def collect_random_rollouts(env,
                             rollout_length,
                             dt_from_xml,
                             params,
-                            visualize=False):
+                            visualize=False,
+                            self_model=False):
 
     #get desired sampler
     if params.use_threading:
@@ -212,7 +213,8 @@ def collect_random_rollouts(env,
     #setup sampler
     print("Beginning to do ", num_rollouts, " random rollouts.")
     c = CollectSamples(
-        env, random_policy, visualize, dt_from_xml, is_random=True, random_sampling_params=random_sampling_params)
+        env, random_policy, visualize, dt_from_xml, is_random=True, random_sampling_params=random_sampling_params,
+        self_model=self_model)
 
 
     #collect rollouts
