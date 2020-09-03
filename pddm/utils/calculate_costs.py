@@ -25,7 +25,7 @@ def cost_per_step(pt, prev_pt, starting_state, goal, costs, actions, dones, rewa
 
     dones = np.logical_or(dones, step_dones)
 
-    step_rews[dones > 0] = 10 # if done, step_rews=10
+    step_rews[dones > 0] = 100 # if done, step_rews=100
     costs -= step_rews
 
 

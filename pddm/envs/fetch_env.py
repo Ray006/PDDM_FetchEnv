@@ -44,7 +44,8 @@ class FetchEnv(robot_env.RobotEnv):
         self.distance_threshold = distance_threshold
         self.reward_type = reward_type
 
-        self.velocity_threshold = 0.005
+        self.velocity_threshold = 0.001
+        self.angle_threshold = 5.0
 
         super(FetchEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
@@ -66,20 +67,18 @@ class FetchEnv(robot_env.RobotEnv):
 
     # Added by Ray get_reward() and get_score()
     # ----------------------------
-    def get_reward(self, observations, starting_state, goal, actions):  ###### V5, grip -> to goal or to object, dense
+    def get_reward(self, observations, starting_state, goal, actions):  ###### V7, grip -> to goal or to object, dense
 
-        # from ipdb import set_trace;
-        # set_trace()
+
 
         # if not self.has_object:
         #     ag_index = 0
         # else:
         #     ag_index = 3
 
-        starting_grip_pos = starting_state[0:3]
-        starting_grip_velp = starting_state[-5:-2]
-        starting_gripper_state = starting_state[3:5]
-        starting_gripper_vel = starting_state[-2:]
+        thre_pos = self.distance_threshold  # 0.05
+        thre_vel = self.velocity_threshold  # 0.005
+        thre_angle = self.angle_threshold  # 5.0
 
         if np.ndim(observations) == 2:  # for the planner to select actions
             n, m = observations.shape
@@ -92,58 +91,149 @@ class FetchEnv(robot_env.RobotEnv):
             gripper_state = observations[:, 3:5]
             gripper_vel = observations[:, -2:]
 
-            P_max = np.linalg.norm(starting_grip_pos - goal[0,:3], axis=-1)
-            V_max = np.linalg.norm(starting_grip_velp - goal[0,3:], axis=-1)
+            # np.arccos(x.dot(y) / (np.linalg.norm(x) * np.linalg.norm(y))) * (180 / np.pi)
 
-            d_pos = np.linalg.norm(grip_pos - goal[:,:3], axis=-1)
-            d_vel = np.linalg.norm(grip_velp - goal[:,3:], axis=-1)
+            goal_pos = goal[:,:3]
+            goal_velp = goal[:,3:]
+            d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
+            d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
 
-            d_pos_ = d_pos/P_max    # normalization, to make the pos and vel the same important.
-            d_vel_ = d_vel/V_max
+            # from ipdb import set_trace;
+            # set_trace()
 
-            thre_pos = self.distance_threshold #0.05
-            thre_vel = self.velocity_threshold # 0.005
+            numerator = np.diagonal(grip_velp.dot(goal_velp.transpose()))
+            denominator = np.linalg.norm(grip_velp, axis=1) * np.linalg.norm(goal_velp, axis=1)
+            angle = np.arccos(numerator / denominator) * (180 / np.pi)
+
 
             index = np.array([i for i in range(n)])
-            Idx = index[(d_pos <= thre_pos) & (d_vel <= thre_vel)] # if d_pos<=thre_pos and d_vel<=thre_vel:
-            # reward[Idx] += 100
+
+            Idx = index[d_pos <= thre_pos]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            reward[Idx] += 10
+            reward[Idx] += -(100*d_vel[Idx]+angle[Idx])
+            dones[Idx] = False
+
+            Idx = index[(d_pos <= thre_pos) & (angle <= thre_angle) & (d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            reward[Idx] += 100
             dones[Idx] = True
 
-            Idx = index[dones==False] # else
-            reward[Idx] = -(d_pos_[Idx] + d_vel_[Idx])
+            Idx = index[d_pos > thre_pos]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            reward[Idx] = -d_pos[Idx]
             dones[Idx] = False
 
             return reward, dones
 
-
         else:  # for the real reward when interacting with the environment.
             m = len(observations)
             assert m == 10
+            reward = 0
 
             grip_pos = observations[0:3]
             grip_velp = observations[-5:-2]
             gripper_state = observations[3:5]
             gripper_vel = observations[-2:]
 
-            P_max = np.linalg.norm(starting_grip_pos - goal[:3], axis=-1)
-            V_max = np.linalg.norm(starting_grip_velp - goal[3:], axis=-1)
+            goal_pos = goal[:3]
+            goal_velp = goal[3:]
 
-            d_pos = np.linalg.norm(grip_pos - goal[:3], axis=-1)
-            d_vel = np.linalg.norm(grip_velp - goal[3:], axis=-1)
+            d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
+            d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
 
-            d_pos_ = d_pos/P_max    # normalization, to make the pos and vel the same important.
-            d_vel_ = d_vel/V_max
 
-            thre_pos = self.distance_threshold #0.05
-            thre_vel = self.velocity_threshold
-
-            if d_pos<=thre_pos and d_vel<=thre_vel:
-                reward = 0
-                done = True
+            if d_pos <= thre_pos:
+                reward += 10
+                angle = np.arccos(grip_velp.dot(goal_velp) / (np.linalg.norm(grip_velp) * np.linalg.norm(goal_velp))) * (180 / np.pi)
+                reward += -(100*d_vel+angle)
+                done = False
+                if angle <= thre_angle and d_vel <= thre_vel:
+                    reward += 100
+                    done = True
             else:
-                reward = -(d_pos_ + d_vel_)
+                reward = -d_pos
                 done = False
             return reward, done
+
+    # Added by Ray get_reward() and get_score()
+    # ----------------------------
+    # def get_reward(self, observations, starting_state, goal, actions):  ###### V6, grip -> to goal or to object, dense
+    #
+    #     # from ipdb import set_trace;
+    #     # set_trace()
+    #
+    #     # if not self.has_object:
+    #     #     ag_index = 0
+    #     # else:
+    #     #     ag_index = 3
+    #
+    #     starting_grip_pos = starting_state[0:3]
+    #     starting_grip_velp = starting_state[-5:-2]
+    #     starting_gripper_state = starting_state[3:5]
+    #     starting_gripper_vel = starting_state[-2:]
+    #
+    #     if np.ndim(observations) == 2:  # for the planner to select actions
+    #         n, m = observations.shape
+    #         assert m == 10
+    #         reward = np.zeros(n)
+    #         dones = np.zeros(n)
+    #
+    #         grip_pos = observations[:, 0:3]
+    #         grip_velp = observations[:, -5:-2]
+    #         gripper_state = observations[:, 3:5]
+    #         gripper_vel = observations[:, -2:]
+    #
+    #         # np.arccos(x.dot(y) / (np.linalg.norm(x) * np.linalg.norm(y))) * (180 / np.pi)
+    #         P_max = np.linalg.norm(starting_grip_pos - goal[0,:3], axis=-1)
+    #         V_max = np.linalg.norm(starting_grip_velp - goal[0,3:], axis=-1)
+    #
+    #         d_pos = np.linalg.norm(grip_pos - goal[:,:3], axis=-1)
+    #         d_vel = np.linalg.norm(grip_velp - goal[:,3:], axis=-1)
+    #
+    #         d_pos_ = d_pos/P_max    # normalization, to make the pos and vel the same important.
+    #         d_vel_ = d_vel/V_max
+    #
+    #         thre_pos = self.distance_threshold #0.05
+    #         thre_vel = self.velocity_threshold # 0.005
+    #
+    #         index = np.array([i for i in range(n)])
+    #         Idx = index[(d_pos <= thre_pos) & (d_vel <= thre_vel)] # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         # reward[Idx] += 100
+    #         dones[Idx] = True
+    #
+    #         Idx = index[dones==False] # else
+    #         reward[Idx] = -(d_pos_[Idx] + d_vel_[Idx])
+    #         dones[Idx] = False
+    #
+    #         return reward, dones
+    #
+    #
+    #     else:  # for the real reward when interacting with the environment.
+    #         m = len(observations)
+    #         assert m == 10
+    #
+    #         grip_pos = observations[0:3]
+    #         grip_velp = observations[-5:-2]
+    #         gripper_state = observations[3:5]
+    #         gripper_vel = observations[-2:]
+    #
+    #         P_max = np.linalg.norm(starting_grip_pos - goal[:3], axis=-1)
+    #         V_max = np.linalg.norm(starting_grip_velp - goal[3:], axis=-1)
+    #
+    #         d_pos = np.linalg.norm(grip_pos - goal[:3], axis=-1)
+    #         d_vel = np.linalg.norm(grip_velp - goal[3:], axis=-1)
+    #
+    #         d_pos_ = d_pos/P_max    # normalization, to make the pos and vel the same important.
+    #         d_vel_ = d_vel/V_max
+    #
+    #         thre_pos = self.distance_threshold #0.05
+    #         thre_vel = self.velocity_threshold
+    #
+    #         if d_pos<=thre_pos and d_vel<=thre_vel:
+    #             reward = 0
+    #             done = True
+    #         else:
+    #             reward = -(d_pos_ + d_vel_)
+    #             done = False
+    #         return reward, done
 
     # # Added by Ray get_reward() and get_score()
     # # ----------------------------
