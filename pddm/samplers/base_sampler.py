@@ -68,7 +68,12 @@ def do_rollout(N_percpu,
 
             #save info
             if isinstance(o, dict):
-                obs = o['observation']
+                self_model = True
+                if self_model:
+                    mixed_obs = o['observation']
+                    obs = np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:]))
+                else:
+                    obs = o['observation']
                 g = o['desired_goal']
                 # curr_state = np.concatenate((obs, g))
                 curr_state = obs
@@ -76,23 +81,48 @@ def do_rollout(N_percpu,
             else:
                 observations.append(o)
 
+            # #save info
+            # if isinstance(o, dict):
+            #     obs = o['observation']
+            #     g = o['desired_goal']
+            #     # curr_state = np.concatenate((obs, g))
+            #     curr_state = obs
+            #     observations.append(curr_state)
+            # else:
+            #     observations.append(o)
+
             actions.append(a)
             rewards.append(r)
             agent_infos.append(0)
             env_infos.append(0) #env_info #causes error when env_info is a dictionary
             o = next_o
-
             step += 1
 
-        #save all results of this candidate action sequence
+        # save all results of this candidate action sequence
         if isinstance(o, dict):
-            obs = o['observation']
+            self_model = True
+            if self_model:
+                mixed_obs = o['observation']
+                obs = np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:]))
+            else:
+                obs = o['observation']
             g = o['desired_goal']
             # curr_state = np.concatenate((obs, g))
             curr_state = obs
             observations.append(curr_state)
         else:
             observations.append(o)
+
+
+        # #save all results of this candidate action sequence
+        # if isinstance(o, dict):
+        #     obs = o['observation']
+        #     g = o['desired_goal']
+        #     # curr_state = np.concatenate((obs, g))
+        #     curr_state = obs
+        #     observations.append(curr_state)
+        # else:
+        #     observations.append(o)
 
         path = dict(
             observations=np.array(observations),

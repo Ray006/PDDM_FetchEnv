@@ -238,10 +238,10 @@ class MPCRollout:
             # test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
             # rew = test_reward
 
-            if self.use_ground_truth_dynamics:
-                # test_reward = self.env.unwrapped_env.compute_reward(next_state['observation'][0:3], next_state['desired_goal'])
-                test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
-                print("done step ", step, ", test_reward: ", test_reward)
+            # if self.use_ground_truth_dynamics:
+            #     # test_reward = self.env.unwrapped_env.compute_reward(next_state['observation'][0:3], next_state['desired_goal'])
+            #     test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
+            #    print("done step ", step, ", test_reward: ", test_reward)
 
             if isinstance(next_state, dict):
                 state_dict = next_state
@@ -258,6 +258,23 @@ class MPCRollout:
                     test_reward, done = self.env.unwrapped_env.get_reward(next_state, curr_state_K[0], goal, None)
                     rew = test_reward
 
+            if self.use_ground_truth_dynamics:
+                # test_reward = self.env.unwrapped_env.compute_reward(next_state['observation'][0:3], next_state['desired_goal'])
+                # test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
+                test_reward, done = self.env.unwrapped_env.get_reward(next_state, curr_state_K[0], goal, None)
+                print("done step ", step, ", test_reward: ", test_reward)
+
+                np.set_printoptions(formatter={'float': '{:0.5f}'.format})
+
+                print("ag:", np.concatenate((next_state[:3], next_state[-5:-2])))
+                print("g :", goal)
+
+                grip_velp = next_state[-5:-2]
+                goal_velp = goal[3:]
+                d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
+                angle = np.arccos(grip_velp.dot(goal_velp) / (np.linalg.norm(grip_velp) * np.linalg.norm(goal_velp))) * (180 / np.pi)
+                print("d_vel:", d_vel)
+                print("angle:", angle)
 
             #################################################
             #### get predicted next_state
@@ -336,6 +353,13 @@ class MPCRollout:
             np.set_printoptions(formatter={'float':'{:0.5f}'.format})
             print("ag:",np.concatenate((traj_taken[-1][:3],traj_taken[-1][-5:-2])))
             print("g :",goal)
+
+            grip_velp = traj_taken[-1][-5:-2]
+            goal_velp = goal[3:]
+            d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
+            angle = np.arccos(grip_velp.dot(goal_velp) / (np.linalg.norm(grip_velp) * np.linalg.norm(goal_velp))) * (180 / np.pi)
+            print("d_vel:", d_vel)
+            print("angle:", angle)
 
         rollout_info = dict(
             starting_state=starting_fullenvstate,

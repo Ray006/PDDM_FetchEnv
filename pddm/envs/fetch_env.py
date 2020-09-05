@@ -110,7 +110,7 @@ class FetchEnv(robot_env.RobotEnv):
 
             Idx = index[d_pos <= thre_pos]  # if d_pos<=thre_pos and d_vel<=thre_vel:
             reward[Idx] += 10
-            reward[Idx] += -(100*d_vel[Idx]+angle[Idx])
+            reward[Idx] += -(100*d_vel[Idx]+0.01*angle[Idx])
             dones[Idx] = False
 
             Idx = index[(d_pos <= thre_pos) & (angle <= thre_angle) & (d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
@@ -143,7 +143,7 @@ class FetchEnv(robot_env.RobotEnv):
             if d_pos <= thre_pos:
                 reward += 10
                 angle = np.arccos(grip_velp.dot(goal_velp) / (np.linalg.norm(grip_velp) * np.linalg.norm(goal_velp))) * (180 / np.pi)
-                reward += -(100*d_vel+angle)
+                reward += -(100*d_vel+0.01*angle)
                 done = False
                 if angle <= thre_angle and d_vel <= thre_vel:
                     reward += 100
