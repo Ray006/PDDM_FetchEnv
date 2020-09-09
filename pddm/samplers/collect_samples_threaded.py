@@ -45,6 +45,9 @@ class CollectSamples(object):
         num_workers = multiprocessing.cpu_count()  #detect number of cores
         pool = multiprocessing.Pool(8)
 
+        # from ipdb import set_trace;
+        # set_trace()
+
         #multiprocessing for running rollouts (utilize multiple cores)
         for rollout_number in range(num_rollouts):
             result = pool.apply_async(
@@ -77,10 +80,15 @@ class CollectSamples(object):
 
             state_dict = observation
             if self.self_model:
-                mixed_obs = state_dict['observation']
-                obs.append(np.concatenate((mixed_obs[:3],mixed_obs[9:11],mixed_obs[-5:])))
+                if self.env.unwrapped_env.has_object:
+                    mixed_obs = state_dict['observation']
+                    obs.append(np.concatenate((mixed_obs[:3],mixed_obs[9:11],mixed_obs[-5:])))
+                else:
+                    obs.append(state_dict['observation'])
             else:
                 obs.append(state_dict['observation'])
+
+
             ag.append(state_dict['achieved_goal'])
             g.append(state_dict['desired_goal'])
             o = obs[-1]
@@ -109,8 +117,11 @@ class CollectSamples(object):
             if isinstance(next_observation, dict):
                 state_dict = next_observation
                 if self.self_model:
-                    mixed_obs = state_dict['observation']
-                    obs.append(np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:])))
+                    if self.env.unwrapped_env.has_object:
+                        mixed_obs = state_dict['observation']
+                        obs.append(np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:])))
+                    else:
+                        obs.append(state_dict['observation'])
                 else:
                     obs.append(state_dict['observation'])
                 ag.append(state_dict['achieved_goal'])

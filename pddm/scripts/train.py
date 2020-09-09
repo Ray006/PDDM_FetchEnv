@@ -83,6 +83,8 @@ def run_job(args, save_dir=None):
         ########################################
         ### create loader, env, rand policy
         ########################################
+        # from ipdb import set_trace;
+        # set_trace()
 
         loader = Loader(save_dir)
         env, dt_from_xml = create_env(env_name)
@@ -625,8 +627,8 @@ def main():
 
 def test_env():
 
-    from ipdb import set_trace;
-    set_trace()
+    # from ipdb import set_trace;
+    # set_trace()
     import gym
 
     env, dt_from_xml = create_env('MB_FetchPush-v1')
@@ -634,18 +636,21 @@ def test_env():
     low = env.env.action_space.low
 
     for i in range(2000):
-        env.reset()                 #### reset() in mb_env.py ####
+        o = env.reset()                 #### reset() in mb_env.py ####
         a = env.env.action_space.sample()
-        a = np.zeros_like(a)
+        # a = np.zeros_like(a)
+        a = -np.ones_like(a)
         for j in range(10):
+            print('a:',a)
+            print("o:", o['observation'][:3], o['observation'][5:8])
             for t in range(10):
-                print(a)
                 o, r, done, env_info = env.step(a)  #### step() in mb_env.py  ####
                 env.env.render()
                 # if done:
                 #     print('done in i and t:',done,i,t)
                 #     break
-            a[0] += 0.1
+            # a[i] += 0.1
+        # a[i] += 0.1
 
 
         from ipdb import set_trace;

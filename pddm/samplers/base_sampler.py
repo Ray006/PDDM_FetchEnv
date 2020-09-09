@@ -70,8 +70,11 @@ def do_rollout(N_percpu,
             if isinstance(o, dict):
                 self_model = True
                 if self_model:
-                    mixed_obs = o['observation']
-                    obs = np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:]))
+                    if env.unwrapped_env.has_object:
+                        mixed_obs = o['observation']
+                        obs = np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:]))
+                    else:
+                        obs = o['observation']
                 else:
                     obs = o['observation']
                 g = o['desired_goal']
@@ -102,8 +105,11 @@ def do_rollout(N_percpu,
         if isinstance(o, dict):
             self_model = True
             if self_model:
-                mixed_obs = o['observation']
-                obs = np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:]))
+                if env.unwrapped_env.has_object:
+                    mixed_obs = o['observation']
+                    obs = np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:]))
+                else:
+                    obs = o['observation']
             else:
                 obs = o['observation']
             g = o['desired_goal']

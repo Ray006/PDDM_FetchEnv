@@ -1,7 +1,7 @@
 import os
 from gym import utils
-from gym.envs.robotics import fetch_env
-
+# from gym.envs.robotics import fetch_env1
+from pddm.envs import fetch_env
 
 # Ensure we get the path separator correct on windows
 MODEL_XML_PATH = os.path.join('fetch', 'reach.xml')
@@ -20,3 +20,10 @@ class FetchReachEnv(fetch_env.FetchEnv, utils.EzPickle):
             obj_range=0.15, target_range=0.15, distance_threshold=0.05,
             initial_qpos=initial_qpos, reward_type=reward_type)
         utils.EzPickle.__init__(self)
+
+    def do_reset(self, initial_state):   #used for using true dynamic in pddm
+
+        self.sim.set_state(initial_state[0])
+        self.goal = initial_state[1]
+        self.sim.forward()
+        return self._get_obs()

@@ -140,8 +140,11 @@ class MPCRollout:
             obs, ag, g, successes = [], [], [], []
             state_dict = starting_observation
             if self.self_model:
-                mixed_obs = state_dict['observation']
-                obs.append(np.concatenate((mixed_obs[:3],mixed_obs[9:11],mixed_obs[-5:])))
+                if self.env.unwrapped_env.has_object:
+                    mixed_obs = state_dict['observation']
+                    obs.append(np.concatenate((mixed_obs[:3],mixed_obs[9:11],mixed_obs[-5:])))
+                else:
+                    obs.append(state_dict['observation'])
             else:
                 obs.append(state_dict['observation'])
             ag.append(state_dict['achieved_goal'])
@@ -186,7 +189,17 @@ class MPCRollout:
         #### loop over steps in rollout
         #######################################
         if goal is not None:
-            goal = np.concatenate((g[0],goal[-3:]))
+            # goal = np.concatenate((g[0],goal[-3:]))
+            # angle = np.arccos(g[0].dot(ag[0]) / (np.linalg.norm(g[0]) * np.linalg.norm(ag[0]))) * (180 / np.pi)
+
+            direction_vec = g[0]-ag[0]
+            norm_direction_vec = direction_vec/np.linalg.norm(direction_vec)
+            vel = np.random.rand(1)*0.02
+            vel_vec = norm_direction_vec * vel
+            goal = np.concatenate((g[0],vel_vec))  # d =7
+
+            # goal = goal
+
         else:
             goal = g[0]
 
@@ -246,8 +259,11 @@ class MPCRollout:
             if isinstance(next_state, dict):
                 state_dict = next_state
                 if self.self_model:
-                    mixed_obs = state_dict['observation']
-                    obs.append(np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:])))
+                    if self.env.unwrapped_env.has_object:
+                        mixed_obs = state_dict['observation']
+                        obs.append(np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:])))
+                    else:
+                        obs.append(state_dict['observation'])
                 else:
                     obs.append(state_dict['observation'])
                 ag.append(state_dict['achieved_goal'])
@@ -266,13 +282,18 @@ class MPCRollout:
 
                 np.set_printoptions(formatter={'float': '{:0.5f}'.format})
 
-                print("ag:", np.concatenate((next_state[:3], next_state[-5:-2])))
-                print("g :", goal)
+                OBS = next_state
+                grip_pos = OBS[:3]
+                grip_velp_vec = OBS[-5:-2]
 
-                grip_velp = next_state[-5:-2]
-                goal_velp = goal[3:]
-                d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
-                angle = np.arccos(grip_velp.dot(goal_velp) / (np.linalg.norm(grip_velp) * np.linalg.norm(goal_velp))) * (180 / np.pi)
+                print("ag", np.concatenate((grip_pos,grip_velp_vec)))
+                print("g :", goal)
+                d_pos = np.linalg.norm(grip_pos - goal[:3], axis=-1)
+                print("d_pos:", d_pos)
+
+                goal_velp_vec = goal[3:6]
+                angle = np.arccos(grip_velp_vec.dot(goal_velp_vec) / (np.linalg.norm(grip_velp_vec) * np.linalg.norm(goal_velp_vec))) * (180 / np.pi)
+                d_vel = np.linalg.norm(grip_velp_vec - goal_velp_vec, axis=-1)
                 print("d_vel:", d_vel)
                 print("angle:", angle)
 
@@ -351,13 +372,20 @@ class MPCRollout:
             print("Total reward: ", total_reward_for_episode)
 
             np.set_printoptions(formatter={'float':'{:0.5f}'.format})
-            print("ag:",np.concatenate((traj_taken[-1][:3],traj_taken[-1][-5:-2])))
-            print("g :",goal)
 
-            grip_velp = traj_taken[-1][-5:-2]
-            goal_velp = goal[3:]
-            d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
-            angle = np.arccos(grip_velp.dot(goal_velp) / (np.linalg.norm(grip_velp) * np.linalg.norm(goal_velp))) * (180 / np.pi)
+            OBS = traj_taken[-1]
+            grip_pos = OBS[:3]
+            grip_velp_vec = OBS[-5:-2]
+
+            print("g :", goal)
+            d_pos = np.linalg.norm(grip_pos - goal[:3], axis=-1)
+            print("d_pos:", d_pos)
+
+            goal_velp_vec = goal[3:6]
+            angle = np.arccos(
+                grip_velp_vec.dot(goal_velp_vec) / (np.linalg.norm(grip_velp_vec) * np.linalg.norm(goal_velp_vec))) * (
+                                180 / np.pi)
+            d_vel = np.linalg.norm(grip_velp_vec - goal_velp_vec, axis=-1)
             print("d_vel:", d_vel)
             print("angle:", angle)
 

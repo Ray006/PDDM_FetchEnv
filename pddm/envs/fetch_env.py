@@ -45,7 +45,7 @@ class FetchEnv(robot_env.RobotEnv):
         self.reward_type = reward_type
 
         self.velocity_threshold = 0.001
-        self.angle_threshold = 5.0
+        self.angle_threshold = 3.0
 
         super(FetchEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
@@ -67,9 +67,7 @@ class FetchEnv(robot_env.RobotEnv):
 
     # Added by Ray get_reward() and get_score()
     # ----------------------------
-    def get_reward(self, observations, starting_state, goal, actions):  ###### V7, grip -> to goal or to object, dense
-
-
+    def get_reward(self, observations, starting_state, goal, actions):  ###### FetchReach, V9, grip -> to goal or to object, dense
 
         # if not self.has_object:
         #     ag_index = 0
@@ -77,7 +75,7 @@ class FetchEnv(robot_env.RobotEnv):
         #     ag_index = 3
 
         thre_pos = self.distance_threshold  # 0.05
-        thre_vel = self.velocity_threshold  # 0.005
+        thre_vel = self.velocity_threshold  # 0.001
         thre_angle = self.angle_threshold  # 5.0
 
         if np.ndim(observations) == 2:  # for the planner to select actions
@@ -87,39 +85,48 @@ class FetchEnv(robot_env.RobotEnv):
             dones = np.zeros(n)
 
             grip_pos = observations[:, 0:3]
-            grip_velp = observations[:, -5:-2]
-            gripper_state = observations[:, 3:5]
-            gripper_vel = observations[:, -2:]
+            grip_velp_vec = observations[:, -5:-2]
 
-            # np.arccos(x.dot(y) / (np.linalg.norm(x) * np.linalg.norm(y))) * (180 / np.pi)
-
-            goal_pos = goal[:,:3]
-            goal_velp = goal[:,3:]
-            d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
-            d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
+            goal_pos = goal[:, :3]
+            goal_velp_vec = goal[:, 3:6]
 
             # from ipdb import set_trace;
             # set_trace()
 
-            numerator = np.diagonal(grip_velp.dot(goal_velp.transpose()))
-            denominator = np.linalg.norm(grip_velp, axis=1) * np.linalg.norm(goal_velp, axis=1)
-            angle = np.arccos(numerator / denominator) * (180 / np.pi)
+            d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
+            d_vel = np.linalg.norm(grip_velp_vec - goal_velp_vec, axis=-1)
 
+            numerator = np.diagonal(grip_velp_vec.dot(goal_velp_vec.transpose()))
+            denominator = np.linalg.norm(grip_velp_vec, axis=1) * np.linalg.norm(goal_velp_vec, axis=1)
+            diff_angle = np.arccos(numerator / denominator) * (180 / np.pi)
 
             index = np.array([i for i in range(n)])
-
-            Idx = index[d_pos <= thre_pos]  # if d_pos<=thre_pos and d_vel<=thre_vel:
-            reward[Idx] += 10
-            reward[Idx] += -(100*d_vel[Idx]+0.01*angle[Idx])
-            dones[Idx] = False
-
-            Idx = index[(d_pos <= thre_pos) & (angle <= thre_angle) & (d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            # Idx = index[(d_pos <= thre_pos) & (diff_angle <= thre_angle) & (d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            # Idx = index[(d_pos <= thre_pos) & (diff_angle <= thre_angle)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            # Idx = index[(d_pos <= thre_pos) & (d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            Idx = index[(d_pos <= thre_pos)]
+            # Idx = index[(d_vel <= thre_vel)]
             reward[Idx] += 100
             dones[Idx] = True
 
-            Idx = index[d_pos > thre_pos]  # if d_pos<=thre_pos and d_vel<=thre_vel:
-            reward[Idx] = -d_pos[Idx]
-            dones[Idx] = False
+
+
+
+            Idx = index[dones==0]
+            reward[Idx] += - d_pos[Idx]
+            # reward[Idx] += - d_vel[Idx]*1e7
+
+            # Idx = index[(d_vel <= thre_vel*10)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            # reward[Idx] += 10
+            #
+            # Idx = index[diff_angle <= 100]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            # reward[Idx] += 1
+            # Idx = index[diff_angle <= 50]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            # reward[Idx] += 2
+            # Idx = index[diff_angle <= 10]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            # reward[Idx] += 5
+            # Idx = index[diff_angle <= 5]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+            # reward[Idx] += 10
 
             return reward, dones
 
@@ -129,29 +136,330 @@ class FetchEnv(robot_env.RobotEnv):
             reward = 0
 
             grip_pos = observations[0:3]
-            grip_velp = observations[-5:-2]
-            gripper_state = observations[3:5]
-            gripper_vel = observations[-2:]
+            grip_velp_vec = observations[-5:-2]
 
             goal_pos = goal[:3]
-            goal_velp = goal[3:]
+            goal_velp_vec = goal[3:6]
 
             d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
-            d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
+            d_vel = np.linalg.norm(grip_velp_vec - goal_velp_vec, axis=-1)
 
 
+            # v_vec_norm_grip = np.linalg.norm(grip_velp_vec, axis=-1)
+            # v_vec_norm_goal = np.linalg.norm(goal_velp_vec, axis=-1)
+            # diff_v_vec_norm = np.linalg.norm(v_vec_norm_grip - v_vec_norm_goal, axis = 1)
+
+            # d_vel = abs(grip_velp - goal_vel)
+            diff_angle = np.arccos(grip_velp_vec.dot(goal_velp_vec) / (np.linalg.norm(grip_velp_vec) * np.linalg.norm(goal_velp_vec))) * (180 / np.pi)
+
+            # from ipdb import set_trace;
+            # set_trace()
+
+            done = False
+            # if d_pos <= thre_pos and d_vel <= thre_vel:
+            # if d_pos <= thre_pos and diff_angle <= thre_angle:
+            # if d_pos <= thre_pos and diff_angle <= thre_angle and d_vel <= thre_vel:
             if d_pos <= thre_pos:
-                reward += 10
-                angle = np.arccos(grip_velp.dot(goal_velp) / (np.linalg.norm(grip_velp) * np.linalg.norm(goal_velp))) * (180 / np.pi)
-                reward += -(100*d_vel+0.01*angle)
-                done = False
-                if angle <= thre_angle and d_vel <= thre_vel:
-                    reward += 100
-                    done = True
+            # if d_vel <= thre_vel:
+                reward += 100
+                done = True
+
             else:
-                reward = -d_pos
-                done = False
+                reward += - d_pos
+                # reward += - d_vel*1e7
+
+
+            #     if diff_angle <= 100:
+            #         reward += 1
+            #     if diff_angle <= 50:
+            #         reward += 2
+            #     if diff_angle <= 10:
+            #         reward += 5
+            #     if diff_angle <= 5:
+            #         reward += 10
+            #
+            #     done = False
+
             return reward, done
+
+    # # Added by Ray get_reward() and get_score()
+    # # ----------------------------
+    # def get_reward(self, observations, starting_state, goal, actions):  ###### FetchReach, V9, pos only
+    #
+    #     # if not self.has_object:
+    #     #     ag_index = 0
+    #     # else:
+    #     #     ag_index = 3
+    #
+    #     thre_pos = self.distance_threshold  # 0.05
+    #     thre_vel = self.velocity_threshold  # 0.001
+    #     thre_angle = self.angle_threshold  # 5.0
+    #
+    #     if np.ndim(observations) == 2:  # for the planner to select actions
+    #         n, m = observations.shape
+    #         assert m == 10
+    #         reward = np.zeros(n)
+    #         dones = np.zeros(n)
+    #
+    #         grip_pos = observations[:, 0:3]
+    #         grip_velp_vec = observations[:, -5:-2]
+    #         grip_velp = np.linalg.norm(grip_velp_vec, axis = 1)   ###################
+    #
+    #         gripper_state = observations[:, 3:5]
+    #         gripper_vel = observations[:, -2:]
+    #
+    #         goal_pos = goal[:, :3]
+    #         goal_dir_vec = goal[:, 3:6]
+    #         goal_vel = goal[:, -1]
+    #
+    #         # from ipdb import set_trace;
+    #         # set_trace()
+    #
+    #         d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
+    #         d_vel = abs( grip_velp - goal_vel ) ###################
+    #
+    #         numerator = np.diagonal(grip_velp_vec.dot(goal_dir_vec.transpose()))
+    #         denominator = np.linalg.norm(grip_velp_vec, axis=1) * np.linalg.norm(goal_dir_vec, axis=1)
+    #         diff_angle = np.arccos(numerator / denominator) * (180 / np.pi)
+    #
+    #         index = np.array([i for i in range(n)])
+    #         # Idx = index[(d_pos <= thre_pos) & (diff_angle <= thre_angle) & (d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         Idx = index[(d_pos <= thre_pos)]
+    #         reward[Idx] += 100
+    #         dones[Idx] = True
+    #
+    #         Idx = index[dones==0]
+    #         reward[Idx] += - d_pos[Idx]
+    #         # reward[Idx] += - 10*d_vel[Idx]
+    #         #
+    #         # Idx = index[diff_angle <= 100]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         # reward[Idx] += 1
+    #         # Idx = index[diff_angle <= 50]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         # reward[Idx] += 2
+    #         # Idx = index[diff_angle <= 10]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         # reward[Idx] += 5
+    #         # Idx = index[diff_angle <= 5]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         # reward[Idx] += 10
+    #
+    #         return reward, dones
+    #
+    #     else:  # for the real reward when interacting with the environment.
+    #         m = len(observations)
+    #         assert m == 10
+    #         reward = 0
+    #
+    #         grip_pos = observations[0:3]
+    #         grip_velp_vec = observations[-5:-2]
+    #         grip_velp = np.linalg.norm(grip_velp_vec)
+    #         gripper_state = observations[3:5]
+    #         gripper_vel = observations[-2:]
+    #
+    #         goal_pos = goal[:3]
+    #         goal_dir_vec = goal[3:6]
+    #         goal_vel = goal[-1]
+    #
+    #         d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
+    #         d_vel = abs(grip_velp - goal_vel)
+    #         diff_angle = np.arccos(grip_velp_vec.dot(goal_dir_vec) / (np.linalg.norm(grip_velp_vec) * np.linalg.norm(goal_dir_vec))) * (180 / np.pi)
+    #
+    #         # from ipdb import set_trace;
+    #         # set_trace()
+    #
+    #         done = False
+    #         # if d_pos <= thre_pos and diff_angle <= thre_angle and d_vel <= thre_vel:
+    #         if d_pos <= thre_pos :
+    #             reward += 100
+    #             done = True
+    #         else:
+    #             reward += - d_pos
+    #             # reward += - 10*d_vel
+    #         #
+    #         #     if diff_angle <= 100:
+    #         #         reward += 1
+    #         #     if diff_angle <= 50:
+    #         #         reward += 2
+    #         #     if diff_angle <= 10:
+    #         #         reward += 5
+    #         #     if diff_angle <= 5:
+    #         #         reward += 10
+    #         #
+    #         #     done = False
+    #
+    #         return reward, done
+
+    # Added by Ray get_reward() and get_score()
+    # ----------------------------
+    # def get_reward(self, observations, starting_state, goal,
+    #                actions):  ###### FetchReach, V8, grip -> to goal or to object, dense
+    #
+    #     # if not self.has_object:
+    #     #     ag_index = 0
+    #     # else:
+    #     #     ag_index = 3
+    #
+    #     thre_pos = self.distance_threshold  # 0.05
+    #     thre_vel = self.velocity_threshold  # 0.005
+    #     thre_angle = self.angle_threshold  # 5.0
+    #
+    #     if np.ndim(observations) == 2:  # for the planner to select actions
+    #         n, m = observations.shape
+    #         assert m == 10
+    #         reward = np.zeros(n)
+    #         dones = np.zeros(n)
+    #
+    #         grip_pos = observations[:, 0:3]
+    #         grip_velp = observations[:, -5:-2]
+    #         gripper_state = observations[:, 3:5]
+    #         gripper_vel = observations[:, -2:]
+    #
+    #         # np.arccos(x.dot(y) / (np.linalg.norm(x) * np.linalg.norm(y))) * (180 / np.pi)
+    #
+    #         goal_pos = goal[:, :3]
+    #         goal_velp = goal[:, 3:]
+    #         d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
+    #         d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
+    #
+    #         # from ipdb import set_trace;
+    #         # set_trace()
+    #
+    #         numerator = np.diagonal(grip_velp.dot(goal_velp.transpose()))
+    #         denominator = np.linalg.norm(grip_velp, axis=1) * np.linalg.norm(goal_velp, axis=1)
+    #         angle = np.arccos(numerator / denominator) * (180 / np.pi)
+    #
+    #         index = np.array([i for i in range(n)])
+    #
+    #         Idx = index[d_pos <= thre_pos]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         reward[Idx] += 10
+    #         reward[Idx] += -(100 * d_vel[Idx] + 0.01 * angle[Idx])
+    #         dones[Idx] = False
+    #
+    #         Idx = index[(d_pos <= thre_pos) & (angle <= thre_angle) & (
+    #                     d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         reward[Idx] += 100
+    #         dones[Idx] = True
+    #
+    #         Idx = index[d_pos > thre_pos]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         reward[Idx] = -d_pos[Idx]
+    #         dones[Idx] = False
+    #
+    #         return reward, dones
+    #
+    #     else:  # for the real reward when interacting with the environment.
+    #         m = len(observations)
+    #         assert m == 10
+    #         reward = 0
+    #
+    #         grip_pos = observations[0:3]
+    #         grip_velp = observations[-5:-2]
+    #         gripper_state = observations[3:5]
+    #         gripper_vel = observations[-2:]
+    #
+    #         goal_pos = goal[:3]
+    #         goal_velp = goal[3:]
+    #
+    #         d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
+    #         d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
+    #
+    #         if d_pos <= thre_pos:
+    #             reward += 10
+    #             angle = np.arccos(
+    #                 grip_velp.dot(goal_velp) / (np.linalg.norm(grip_velp) * np.linalg.norm(goal_velp))) * (
+    #                                 180 / np.pi)
+    #             reward += -(100 * d_vel + 0.01 * angle)
+    #             done = False
+    #             if angle <= thre_angle and d_vel <= thre_vel:
+    #                 reward += 100
+    #                 done = True
+    #         else:
+    #             reward = -d_pos
+    #             done = False
+    #         return reward, done
+
+    # # Added by Ray get_reward() and get_score()
+    # # ----------------------------
+    # def get_reward(self, observations, starting_state, goal, actions):  ######  FetchPush. V7, grip -> to goal or to object, dense
+    #
+    #     # if not self.has_object:
+    #     #     ag_index = 0
+    #     # else:
+    #     #     ag_index = 3
+    #
+    #     thre_pos = self.distance_threshold*2  # 0.05
+    #     thre_vel = self.velocity_threshold  # 0.005
+    #     thre_angle = self.angle_threshold  # 5.0
+    #
+    #     if np.ndim(observations) == 2:  # for the planner to select actions
+    #         n, m = observations.shape
+    #         assert m == 10
+    #         reward = np.zeros(n)
+    #         dones = np.zeros(n)
+    #
+    #         grip_pos = observations[:, 0:3]
+    #         grip_velp = observations[:, -5:-2]
+    #         gripper_state = observations[:, 3:5]
+    #         gripper_vel = observations[:, -2:]
+    #
+    #         # np.arccos(x.dot(y) / (np.linalg.norm(x) * np.linalg.norm(y))) * (180 / np.pi)
+    #
+    #         goal_pos = goal[:,:3]
+    #         goal_velp = goal[:,3:]
+    #         d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
+    #         d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
+    #
+    #         # from ipdb import set_trace;
+    #         # set_trace()
+    #
+    #         numerator = np.diagonal(grip_velp.dot(goal_velp.transpose()))
+    #         denominator = np.linalg.norm(grip_velp, axis=1) * np.linalg.norm(goal_velp, axis=1)
+    #         angle = np.arccos(numerator / denominator) * (180 / np.pi)
+    #
+    #
+    #         index = np.array([i for i in range(n)])
+    #
+    #         Idx = index[d_pos <= thre_pos]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         reward[Idx] += 10
+    #         reward[Idx] += -(100*d_vel[Idx]+0.5*angle[Idx])
+    #         dones[Idx] = False
+    #
+    #         Idx = index[(d_pos <= thre_pos) & (angle <= thre_angle) & (d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         reward[Idx] += 100
+    #         dones[Idx] = True
+    #
+    #         Idx = index[d_pos > thre_pos]  # if d_pos<=thre_pos and d_vel<=thre_vel:
+    #         reward[Idx] = -d_pos[Idx]
+    #         dones[Idx] = False
+    #
+    #         return reward, dones
+    #
+    #     else:  # for the real reward when interacting with the environment.
+    #         m = len(observations)
+    #         assert m == 10
+    #         reward = 0
+    #
+    #         grip_pos = observations[0:3]
+    #         grip_velp = observations[-5:-2]
+    #         gripper_state = observations[3:5]
+    #         gripper_vel = observations[-2:]
+    #
+    #         goal_pos = goal[:3]
+    #         goal_velp = goal[3:]
+    #
+    #         d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
+    #         d_vel = np.linalg.norm(grip_velp - goal_velp, axis=-1)
+    #
+    #
+    #         if d_pos <= thre_pos:
+    #             reward += 10
+    #             angle = np.arccos(grip_velp.dot(goal_velp) / (np.linalg.norm(grip_velp) * np.linalg.norm(goal_velp))) * (180 / np.pi)
+    #             reward += -(100*d_vel+0.5*angle)
+    #             done = False
+    #             if angle <= thre_angle and d_vel <= thre_vel:
+    #                 reward += 100
+    #                 done = True
+    #         else:
+    #             reward = -d_pos
+    #             done = False
+    #         return reward, done
 
     # Added by Ray get_reward() and get_score()
     # ----------------------------

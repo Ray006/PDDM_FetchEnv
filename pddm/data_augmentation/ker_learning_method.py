@@ -19,7 +19,7 @@ class ker_learning:
         self.env_type = env_type
         self.n_ker = n_ker
         self.sym_plane = None
-        if (self.env_type == 'FetchPickAndPlace-v1') or (self.env_type == 'MB_FetchPush-v1' )or (self.env_type == 'FetchReach-v1' ) :
+        if (self.env_type == 'FetchPickAndPlace-v1') or (self.env_type == 'MB_FetchPush-v1' )or (self.env_type == 'MB_FetchReachEnv-v1' ) :
             self.max_z_theta= MAX_Z_THETA_PICK_PUSH
             self.robot_base_x = 0.695
             self.robot_base_y = 0.75

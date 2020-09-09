@@ -45,6 +45,10 @@ def sample_paths_parallel(N,
         ]
         args_list.append(args_list_cpu)
 
+    # from ipdb import set_trace;
+    # set_trace()
+
+
     # Do multiprocessing
     if not suppress_print:
         start_time = timer.time()
