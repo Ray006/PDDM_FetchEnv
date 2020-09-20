@@ -31,8 +31,7 @@ class MPCRollout:
                  execute_sideRollouts,
                  plot_sideRollouts,
                  params,
-                 evaluating=False,
-                 self_model = False):
+                 evaluating=False):
 
         #init vars
         self.env = env
@@ -49,7 +48,6 @@ class MPCRollout:
         self.noise_amount = 0.005
 
         self.reward_func = env.unwrapped_env.get_reward
-        self.self_model = self_model
 
         #init controllers
         self.controller_randshooting = RandomShooting(
@@ -68,8 +66,7 @@ class MPCRollout:
                         starting_observation,
                         controller_type,
                         take_exploratory_actions=False,
-                        isRandom=False,
-                        goal = None):
+                        isRandom=False):
         """
         Args:
             starting_fullenvstate: full state of the mujoco env (enough to allow resetting to it)
@@ -133,20 +130,10 @@ class MPCRollout:
         zero_ac = np.zeros((self.env.action_dim,))
 
 
-
-
-
         if isinstance(starting_observation, dict):
             obs, ag, g, successes = [], [], [], []
             state_dict = starting_observation
-            if self.self_model:
-                if self.env.unwrapped_env.has_object:
-                    mixed_obs = state_dict['observation']
-                    obs.append(np.concatenate((mixed_obs[:3],mixed_obs[9:11],mixed_obs[-5:])))
-                else:
-                    obs.append(state_dict['observation'])
-            else:
-                obs.append(state_dict['observation'])
+            obs.append(state_dict['observation'])
             ag.append(state_dict['achieved_goal'])
             g.append(state_dict['desired_goal'])
 
@@ -156,9 +143,6 @@ class MPCRollout:
         else:
             curr_state = np.copy(starting_observation)
             curr_state_K = [curr_state]  #not K yet, but will be
-
-
-
 
 
         #take (K-1) steps of action 0
@@ -188,20 +172,9 @@ class MPCRollout:
         #######################################
         #### loop over steps in rollout
         #######################################
-        if goal is not None:
-            # goal = np.concatenate((g[0],goal[-3:]))
-            # angle = np.arccos(g[0].dot(ag[0]) / (np.linalg.norm(g[0]) * np.linalg.norm(ag[0]))) * (180 / np.pi)
 
-            direction_vec = g[0]-ag[0]
-            norm_direction_vec = direction_vec/np.linalg.norm(direction_vec)
-            vel = np.random.rand(1)*0.02
-            vel_vec = norm_direction_vec * vel
-            goal = np.concatenate((g[0],vel_vec))  # d =7
 
-            # goal = goal
-
-        else:
-            goal = g[0]
+        goal = g[0]
 
         done = False
         while not(done or step>=self.rollout_length):
@@ -247,10 +220,6 @@ class MPCRollout:
             ########################
             next_state, rew, done, env_info = self.env.step(action_to_take)
 
-            # we don't need the original reward, but need my reward function outputs.
-            # test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
-            # rew = test_reward
-
             # if self.use_ground_truth_dynamics:
             #     # test_reward = self.env.unwrapped_env.compute_reward(next_state['observation'][0:3], next_state['desired_goal'])
             #     test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
@@ -258,44 +227,27 @@ class MPCRollout:
 
             if isinstance(next_state, dict):
                 state_dict = next_state
-                if self.self_model:
-                    if self.env.unwrapped_env.has_object:
-                        mixed_obs = state_dict['observation']
-                        obs.append(np.concatenate((mixed_obs[:3], mixed_obs[9:11], mixed_obs[-5:])))
-                    else:
-                        obs.append(state_dict['observation'])
-                else:
-                    obs.append(state_dict['observation'])
+                obs.append(state_dict['observation'])
                 ag.append(state_dict['achieved_goal'])
-                g.append(state_dict['desired_goal'])
+                g.append(goal)
                 next_state = obs[-1]
-
-                if self.self_model:
-                    test_reward, done = self.env.unwrapped_env.get_reward(next_state, curr_state_K[0], goal, None)
-                    rew = test_reward
 
             if self.use_ground_truth_dynamics:
                 # test_reward = self.env.unwrapped_env.compute_reward(next_state['observation'][0:3], next_state['desired_goal'])
                 # test_reward, _ = self.env.unwrapped_env.get_reward(next_state['observation'], next_state['desired_goal'], None)
-                test_reward, done = self.env.unwrapped_env.get_reward(next_state, curr_state_K[0], goal, None)
+                test_reward, done = self.env.unwrapped_env.get_reward(next_state, goal, None)
                 print("done step ", step, ", test_reward: ", test_reward)
 
-                np.set_printoptions(formatter={'float': '{:0.5f}'.format})
-
-                OBS = next_state
-                grip_pos = OBS[:3]
-                grip_velp_vec = OBS[-5:-2]
-
-                print("ag", np.concatenate((grip_pos,grip_velp_vec)))
-                print("g :", goal)
-                d_pos = np.linalg.norm(grip_pos - goal[:3], axis=-1)
-                print("d_pos:", d_pos)
-
-                goal_velp_vec = goal[3:6]
-                angle = np.arccos(grip_velp_vec.dot(goal_velp_vec) / (np.linalg.norm(grip_velp_vec) * np.linalg.norm(goal_velp_vec))) * (180 / np.pi)
-                d_vel = np.linalg.norm(grip_velp_vec - goal_velp_vec, axis=-1)
-                print("d_vel:", d_vel)
-                print("angle:", angle)
+                # np.set_printoptions(formatter={'float': '{:0.5f}'.format})
+                #
+                # OBS = next_state
+                # grip_pos = OBS[:3]
+                # d_pos = np.linalg.norm(grip_pos - goal, axis=-1)
+                # print("d_pos:", d_pos)
+            else:
+                # we don't need the original reward, but need my reward function outputs.
+                test_reward, done = self.env.unwrapped_env.get_reward(next_state, goal, None)
+                rew = test_reward
 
             #################################################
             #### get predicted next_state
@@ -373,21 +325,20 @@ class MPCRollout:
 
             np.set_printoptions(formatter={'float':'{:0.5f}'.format})
 
-            OBS = traj_taken[-1]
-            grip_pos = OBS[:3]
-            grip_velp_vec = OBS[-5:-2]
+            # #for reach
+            # OBS = traj_taken[-1]
+            # grip_pos = OBS[:3]
+            # d_pos = np.linalg.norm(grip_pos - goal, axis=-1)
+            # print("d_pos:", d_pos)
 
-            print("g :", goal)
-            d_pos = np.linalg.norm(grip_pos - goal[:3], axis=-1)
-            print("d_pos:", d_pos)
-
-            goal_velp_vec = goal[3:6]
-            angle = np.arccos(
-                grip_velp_vec.dot(goal_velp_vec) / (np.linalg.norm(grip_velp_vec) * np.linalg.norm(goal_velp_vec))) * (
-                                180 / np.pi)
-            d_vel = np.linalg.norm(grip_velp_vec - goal_velp_vec, axis=-1)
-            print("d_vel:", d_vel)
-            print("angle:", angle)
+            # for push, pickandplace
+            OBS_first = traj_taken[0]
+            OBS_last = traj_taken[-1]
+            ag_1 = OBS_first[3:6]
+            ag_2 = OBS_last[3:6]
+            d_pos1 = np.linalg.norm(ag_1 - goal, axis=-1)
+            d_pos2 = np.linalg.norm(ag_2 - goal, axis=-1)
+            print("d_pos_1, d_pos_2:", d_pos1, d_pos2)
 
         rollout_info = dict(
             starting_state=starting_fullenvstate,

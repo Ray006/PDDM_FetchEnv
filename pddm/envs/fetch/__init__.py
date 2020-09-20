@@ -15,7 +15,7 @@
 from gym.envs.registration import register
 
 register(
-    id='MB_FetchSlideEnv-v1',
+    id='MB_FetchSlide-v1',
     entry_point='pddm.envs.fetch.slide:FetchSlideEnv',
     max_episode_steps=50,
 )
@@ -27,13 +27,13 @@ register(
 )
 
 register(
-    id='MB_FetchPickAndPlaceEnv-v1',
+    id='MB_FetchPickAndPlace-v1',
     entry_point='pddm.envs.fetch.pick_and_place:FetchPickAndPlaceEnv',
     max_episode_steps=50,
 )
 
 register(
-    id='MB_FetchReachEnv-v1',
+    id='MB_FetchReach-v1',
     entry_point='pddm.envs.fetch.reach:FetchReachEnv',
     max_episode_steps=50,
 )

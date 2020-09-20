@@ -14,14 +14,14 @@
 
 import numpy as np
 
-def cost_per_step(pt, prev_pt, starting_state, goal, costs, actions, dones, reward_func):
+def cost_per_step(pt, prev_pt, goal, costs, actions, dones, reward_func):
 
     # from ipdb import set_trace;
     # set_trace()
 
 
 
-    step_rews, step_dones = reward_func(pt, starting_state, goal, actions)
+    step_rews, step_dones = reward_func(pt, goal, actions)
 
     dones = np.logical_or(dones, step_dones)
 
@@ -35,7 +35,7 @@ def cost_per_step(pt, prev_pt, starting_state, goal, costs, actions, dones, rewa
     return costs, dones
 
 missing_rate = 1.0
-def calculate_costs(resulting_states_list, starting_state, goal, actions, reward_func,
+def calculate_costs(resulting_states_list, goal, actions, reward_func,
                     evaluating, take_exploratory_actions):
     """Rank various predicted trajectories (by cost)
 
@@ -117,7 +117,7 @@ def calculate_costs(resulting_states_list, starting_state, goal, actions, reward
             index = (np.linalg.norm((ag - pre_ag),axis=1) > change)
             tiled_goal[index] = sampled_goal[index]
 
-        costs, dones = cost_per_step(pt, prev_pt, starting_state, tiled_goal, costs, actions_per_step, dones, reward_func)
+        costs, dones = cost_per_step(pt, prev_pt, tiled_goal, costs, actions_per_step, dones, reward_func)
         #update
         prev_pt = np.copy(pt)
 

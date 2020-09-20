@@ -19,11 +19,11 @@ class ker_learning:
         self.env_type = env_type
         self.n_ker = n_ker
         self.sym_plane = None
-        if (self.env_type == 'FetchPickAndPlace-v1') or (self.env_type == 'MB_FetchPush-v1' )or (self.env_type == 'MB_FetchReachEnv-v1' ) :
+        if (self.env_type == 'MB_FetchPickAndPlace-v1') or (self.env_type == 'MB_FetchPush-v1' )or (self.env_type == 'MB_FetchReach-v1' ) :
             self.max_z_theta= MAX_Z_THETA_PICK_PUSH
             self.robot_base_x = 0.695
             self.robot_base_y = 0.75
-        elif  self.env_type == 'FetchSlide-v1' :
+        elif  self.env_type == 'MB_FetchSlide-v1' :
             self.max_z_theta = MAX_Z_THETA_SLIDE
             self.robot_base_x = 0.34
             self.robot_base_y = 0.75
@@ -73,9 +73,9 @@ class ker_learning:
             s_v_l_a = self.linear_vector_symmetric_with_rot_plane(True, v_l_a, rot_z_theta, inv_rot_z_theta, i)
             param[0:3] =  s_v_l_a
             # grip vel
-            v_l_a = param[3:6]
+            v_l_a = param[5:8]
             s_v_l_a = self.linear_vector_symmetric_with_rot_plane(False, v_l_a, rot_z_theta, inv_rot_z_theta, i)
-            param[3:6] =  s_v_l_a
+            param[5:8] =  s_v_l_a
             
         elif param_len >= 25:     # observation with object
             # sym_grip_pos

@@ -44,9 +44,6 @@ class FetchEnv(robot_env.RobotEnv):
         self.distance_threshold = distance_threshold
         self.reward_type = reward_type
 
-        self.velocity_threshold = 0.001
-        self.angle_threshold = 3.0
-
         super(FetchEnv, self).__init__(
             model_path=model_path, n_substeps=n_substeps, n_actions=4,
             initial_qpos=initial_qpos)
@@ -67,16 +64,12 @@ class FetchEnv(robot_env.RobotEnv):
 
     # Added by Ray get_reward() and get_score()
     # ----------------------------
-    def get_reward(self, observations, starting_state, goal, actions):  ###### FetchReach, V9, grip -> to goal or to object, dense
+    def get_reward(self, observations, goal, actions):  ###### FetchReach, V9, grip -> to goal or to object, dense
 
         # if not self.has_object:
         #     ag_index = 0
         # else:
         #     ag_index = 3
-
-        thre_pos = self.distance_threshold  # 0.05
-        thre_vel = self.velocity_threshold  # 0.001
-        thre_angle = self.angle_threshold  # 5.0
 
         if np.ndim(observations) == 2:  # for the planner to select actions
             n, m = observations.shape
@@ -85,40 +78,20 @@ class FetchEnv(robot_env.RobotEnv):
             dones = np.zeros(n)
 
             grip_pos = observations[:, 0:3]
-            grip_velp_vec = observations[:, -5:-2]
-
-            goal_pos = goal[:, :3]
-            goal_velp_vec = goal[:, 3:6]
 
             # from ipdb import set_trace;
             # set_trace()
 
-            d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
-            d_vel = np.linalg.norm(grip_velp_vec - goal_velp_vec, axis=-1)
-
-            numerator = np.diagonal(grip_velp_vec.dot(goal_velp_vec.transpose()))
-            denominator = np.linalg.norm(grip_velp_vec, axis=1) * np.linalg.norm(goal_velp_vec, axis=1)
-            diff_angle = np.arccos(numerator / denominator) * (180 / np.pi)
+            d_pos = np.linalg.norm(grip_pos - goal, axis=-1)
 
             index = np.array([i for i in range(n)])
-            # Idx = index[(d_pos <= thre_pos) & (diff_angle <= thre_angle) & (d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
-            # Idx = index[(d_pos <= thre_pos) & (diff_angle <= thre_angle)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
-            # Idx = index[(d_pos <= thre_pos) & (d_vel <= thre_vel)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
-            Idx = index[(d_pos <= thre_pos)]
-            # Idx = index[(d_vel <= thre_vel)]
+            Idx = index[(d_pos <= self.distance_threshold)]
             reward[Idx] += 100
             dones[Idx] = True
 
-
-
-
             Idx = index[dones==0]
             reward[Idx] += - d_pos[Idx]
-            # reward[Idx] += - d_vel[Idx]*1e7
 
-            # Idx = index[(d_vel <= thre_vel*10)]  # if d_pos<=thre_pos and d_vel<=thre_vel:
-            # reward[Idx] += 10
-            #
             # Idx = index[diff_angle <= 100]  # if d_pos<=thre_pos and d_vel<=thre_vel:
             # reward[Idx] += 1
             # Idx = index[diff_angle <= 50]  # if d_pos<=thre_pos and d_vel<=thre_vel:
@@ -136,38 +109,16 @@ class FetchEnv(robot_env.RobotEnv):
             reward = 0
 
             grip_pos = observations[0:3]
-            grip_velp_vec = observations[-5:-2]
-
-            goal_pos = goal[:3]
-            goal_velp_vec = goal[3:6]
-
-            d_pos = np.linalg.norm(grip_pos - goal_pos, axis=-1)
-            d_vel = np.linalg.norm(grip_velp_vec - goal_velp_vec, axis=-1)
-
-
-            # v_vec_norm_grip = np.linalg.norm(grip_velp_vec, axis=-1)
-            # v_vec_norm_goal = np.linalg.norm(goal_velp_vec, axis=-1)
-            # diff_v_vec_norm = np.linalg.norm(v_vec_norm_grip - v_vec_norm_goal, axis = 1)
-
-            # d_vel = abs(grip_velp - goal_vel)
-            diff_angle = np.arccos(grip_velp_vec.dot(goal_velp_vec) / (np.linalg.norm(grip_velp_vec) * np.linalg.norm(goal_velp_vec))) * (180 / np.pi)
-
+            d_pos = np.linalg.norm(grip_pos - goal, axis=-1)
             # from ipdb import set_trace;
             # set_trace()
 
             done = False
-            # if d_pos <= thre_pos and d_vel <= thre_vel:
-            # if d_pos <= thre_pos and diff_angle <= thre_angle:
-            # if d_pos <= thre_pos and diff_angle <= thre_angle and d_vel <= thre_vel:
-            if d_pos <= thre_pos:
-            # if d_vel <= thre_vel:
+            if d_pos <= self.distance_threshold:
                 reward += 100
                 done = True
-
             else:
                 reward += - d_pos
-                # reward += - d_vel*1e7
-
 
             #     if diff_angle <= 100:
             #         reward += 1
@@ -725,4 +676,3 @@ class FetchEnv(robot_env.RobotEnv):
         self.initial_gripper_xpos = self.sim.data.get_site_xpos('robot0:grip').copy()
         if self.has_object:
             self.height_offset = self.sim.data.get_site_xpos('object0')[2]
-

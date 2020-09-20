@@ -63,9 +63,13 @@ class MBEnvWrapper:
 
         #return
         if return_start_state:
+
+            # from ipdb import set_trace;
+            # set_trace()
+
             if hasattr(self.unwrapped_env, 'sim'):
                 # reset_state = self.unwrapped_env.initial_state
-                reset_state = self.unwrapped_env.sim.get_state()
+                    reset_state = self.unwrapped_env.sim.get_state()
             else:
                 reset_state = None
             #goal

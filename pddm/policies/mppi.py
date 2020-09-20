@@ -170,7 +170,7 @@ class MPPI(object):
         # set_trace()
 
         # calculate costs [N,]
-        costs, mean_costs, std_costs = calculate_costs(resulting_states_list, curr_state_K[0], goal, all_samples,
+        costs, mean_costs, std_costs = calculate_costs(resulting_states_list, goal, all_samples,
                                 self.reward_func, evaluating, take_exploratory_actions)
 
         # print('mean_costs',mean_costs)

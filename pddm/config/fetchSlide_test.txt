@@ -18,7 +18,7 @@
 ##### run options
 #########################
 
-'job_name': ['FetchPush'],
+'job_name': ['FetchSlide'],
 'seed': [0],
 
 #########################
@@ -26,18 +26,18 @@
 #########################
 
 ## env
-'env_name': ['MB_FetchPush-v1'],
-'rollout_length': [15],
+'env_name': ['MB_FetchSlide-v1'],
+'rollout_length': [50],
 'num_iters': [200],
-'num_trajectories_per_iter': [1],
+'num_trajectories_per_iter': [40],
 
 ## continue
 'continue_run': [-1],
 'continue_run_filepath': [''],
 
 ## some T/F options
-'use_ground_truth_dynamics': [True],
-'visualize_MPC_rollout': [True],
+'use_ground_truth_dynamics': [False],
+'visualize_MPC_rollout': [False],
 'print_minimal': [False],
 
 ## noise
@@ -52,8 +52,8 @@
 
 ## collect random rollouts
 'load_existing_random_data': [False],
-'num_rand_rollouts_train': [2],
-'num_rand_rollouts_val': [1],
+'num_rand_rollouts_train': [30],
+'num_rand_rollouts_val': [30],
 'rand_rollout_length': [50],
 'use_threading': [True],
 
@@ -78,8 +78,8 @@
 'always_use_savedModel': [False],
 'batchsize': [512],
 'lr': [0.001],
-'nEpoch': [3],
-'nEpoch_init': [3],
+'nEpoch': [40],
+'nEpoch_init': [40],
 
 ##########################
 ##### controller
@@ -97,6 +97,6 @@
 ## mppi
 'mppi_kappa': [10],
 'mppi_mag_noise': [0.9],
-'mppi_beta': [0.6],
+'mppi_beta': [0.7],
 
 }
