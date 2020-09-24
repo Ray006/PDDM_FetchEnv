@@ -77,14 +77,14 @@ class FetchPickAndPlaceEnv(fetch_env.FetchEnv, utils.EzPickle):
 
             if d_ag2g <= self.distance_threshold:
                 reward += 100
-                done = True
+                # done = True
             else:
                 reward += - (d_grip2ag + 10 * d_ag2g)
 
             return reward, done
 
 
-    # def get_reward(self, observations, goal, actions):    ######
+    # def get_reward(self, observations, goal, actions):    ###### even the true dynamics does not work
     #
     #     # print('Test: this is the PushEnv reward func')
     #

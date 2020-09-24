@@ -133,6 +133,14 @@ def run_job(args, save_dir=None):
             # from ipdb import set_trace;
             # set_trace()
 
+            ######################### PickAndPlace demo #################################
+            demo = False
+            # demo = True
+            if demo:
+                from pddm.scripts.read_npy import get_rollouts
+                addr = 'pddm/pickandplace_demo_data/1000/'
+                rollouts_trainRand = get_rollouts(addr)
+
             ######################### ker #################################
             id = args.env_name
             n_KER = 3
@@ -498,6 +506,11 @@ def run_job(args, save_dir=None):
             trainingData_perIter.append(numData_train_rand +
                                         numData_train_onPol)
             trainingLoss_perIter.append(training_loss)
+
+
+            # from ipdb import set_trace;
+            # set_trace()
+
 
             ### stage relevant info for saving
             saver_data.training_numData = trainingData_perIter

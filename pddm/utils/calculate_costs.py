@@ -13,6 +13,45 @@
 # limitations under the License.
 
 import numpy as np
+from ipdb import set_trace
+
+# def training_reward_func(observations, goal):  ######
+#
+#     # print('Test: this is the PushEnv reward func')
+#     distance_threshold = 0.05
+#     count_ray = 0
+#
+#     # from ipdb import set_trace;
+#     # set_trace()
+#
+#     if np.ndim(observations) == 2:  # for the planner to select actions
+#         n, m = observations.shape
+#         assert m == 25
+#         reward = np.zeros(n)
+#         dones = np.zeros(n)
+#
+#         grip_pos = observations[:, :3]
+#         ag = observations[:, 3:6]
+#
+#         # ****************** meaningful traj?
+#         set_trace()
+#
+#         ag = np.array(ag)
+#         delta_movement = np.linalg.norm(ag[1:] - ag[0], axis=2)  # compare with the object starting pos
+#         if any(delta_movement > 0.05):  # if the object is moved
+#             count_ray += 1
+#             # print('move the ag:', count_ray)
+#         # ****************** meaningful traj?
+#
+#
+#         d_grip2ag = np.linalg.norm(grip_pos - ag, axis=-1)
+#
+#         index = np.array([i for i in range(n)])
+#
+#         # Idx = index[(d_ag2g > distance_threshold)]
+#         # reward[Idx] += - d_grip2ag[Idx]
+#
+#         return reward, dones
 
 def cost_per_step(pt, prev_pt, goal, costs, actions, dones, reward_func):
 
@@ -20,6 +59,8 @@ def cost_per_step(pt, prev_pt, goal, costs, actions, dones, reward_func):
     # set_trace()
 
 
+
+    # step_rews, step_dones = training_reward_func(pt, goal)
 
     step_rews, step_dones = reward_func(pt, goal, actions)
 

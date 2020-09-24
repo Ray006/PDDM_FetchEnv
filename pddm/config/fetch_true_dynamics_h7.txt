@@ -34,7 +34,7 @@
 
 'rollout_length': [50],
 'num_iters': [200],
-'num_trajectories_per_iter': [2],
+'num_trajectories_per_iter': [100],
 
 ## continue
 'continue_run': [-1],

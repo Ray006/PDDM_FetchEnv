@@ -32,6 +32,62 @@ class FetchPushEnv(fetch_env.FetchEnv, utils.EzPickle):
         self.sim.forward()
         return self._get_obs()
 
+    # def get_reward(self, observations, goal, actions):    ######
+    #
+    #     # print('Test: this is the PushEnv reward func')
+    #
+    #     # from ipdb import set_trace;
+    #     # set_trace()
+    #
+    #     if np.ndim(observations)==2:       # for the planner to select actions
+    #         n,m = observations.shape
+    #         assert m == 25
+    #         reward = np.zeros(n)
+    #         dones = np.zeros(n)
+    #
+    #         grip_pos = observations[:,:3]
+    #         ag = observations[:,3:6]
+    #
+    #         d_grip2ag = np.linalg.norm(grip_pos - ag, axis=-1)
+    #         d_ag2g = np.linalg.norm(ag - goal, axis=-1)
+    #
+    #         index = np.array([i for i in range(n)])
+    #         Idx = index[(d_ag2g <= self.distance_threshold)]
+    #         reward[Idx] += 100
+    #         dones[Idx] = True
+    #
+    #         Idx = index[(d_ag2g > self.distance_threshold) & (d_grip2ag <= self.distance_threshold*2)]
+    #         reward[Idx] += 1 - 10*d_ag2g[Idx]
+    #         Idx = index[(d_ag2g > self.distance_threshold) & (d_grip2ag > self.distance_threshold*2)]
+    #         reward[Idx] += - (d_grip2ag[Idx] + 10*d_ag2g[Idx])
+    #
+    #         return reward, dones
+    #
+    #     else:      # for the real reward when interacting with the environment.
+    #         m = len(observations)
+    #         assert m == 25
+    #         reward = 0
+    #         done = False
+    #
+    #         grip_pos = observations[:3]
+    #         ag = observations[3:6]
+    #
+    #         d_grip2ag = np.linalg.norm(grip_pos - ag, axis=-1)
+    #         d_ag2g = np.linalg.norm(ag - goal, axis=-1)
+    #
+    #         if d_ag2g <= self.distance_threshold:
+    #             reward += 100
+    #             done = True
+    #         else:
+    #             reward += - d_ag2g
+    #
+    #             if d_grip2ag <= self.distance_threshold * 2:
+    #                 reward += 1
+    #             else:
+    #                 reward += - d_grip2ag
+    #
+    #         return reward, done
+
     def get_reward(self, observations, goal, actions):    ######
 
         # print('Test: this is the PushEnv reward func')
@@ -53,13 +109,18 @@ class FetchPushEnv(fetch_env.FetchEnv, utils.EzPickle):
 
             index = np.array([i for i in range(n)])
             Idx = index[(d_ag2g <= self.distance_threshold)]
-            reward[Idx] += 100
+            reward[Idx] += 1000
             dones[Idx] = True
 
-            Idx = index[(d_ag2g > self.distance_threshold) & (d_grip2ag <= self.distance_threshold*2)]
-            reward[Idx] += 1 - 10*d_ag2g[Idx]
-            Idx = index[(d_ag2g > self.distance_threshold) & (d_grip2ag > self.distance_threshold*2)]
-            reward[Idx] += - (d_grip2ag[Idx] + 10*d_ag2g[Idx])
+            Idx = index[(d_ag2g <= self.distance_threshold*2)]
+            reward[Idx] += 100
+            Idx = index[(d_ag2g > self.distance_threshold*2)]
+            reward[Idx] +=- 10*d_ag2g[Idx]
+
+            Idx = index[(d_grip2ag <= self.distance_threshold*2)]
+            reward[Idx] += 10
+            Idx = index[(d_grip2ag > self.distance_threshold*2)]
+            reward[Idx] += - 10*d_grip2ag[Idx]
 
             return reward, dones
 
@@ -76,14 +137,16 @@ class FetchPushEnv(fetch_env.FetchEnv, utils.EzPickle):
             d_ag2g = np.linalg.norm(ag - goal, axis=-1)
 
             if d_ag2g <= self.distance_threshold:
-                reward += 100
+                reward += 1000
                 done = True
+            elif d_ag2g <= self.distance_threshold * 2:
+                reward += 100
             else:
-                reward += - d_ag2g
+                reward += - 10*d_ag2g
 
-                if d_grip2ag <= self.distance_threshold * 2:
-                    reward += 1
-                else:
-                    reward += - d_grip2ag
+            if d_grip2ag <= self.distance_threshold * 2:
+                reward += 10
+            else:
+                reward += - 10*d_grip2ag
 
             return reward, done
