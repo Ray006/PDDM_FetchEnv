@@ -49,6 +49,9 @@ class MPCRollout:
 
         self.reward_func = env.unwrapped_env.get_reward
 
+        # from ipdb import set_trace;
+        # set_trace()
+
         #init controllers
         self.controller_randshooting = RandomShooting(
                                 self.env, self.dyn_models, self.reward_func, rand_policy,
@@ -361,6 +364,201 @@ class MPCRollout:
             actions_K=actions_taken_K,
             env_infos=env_infos,
             dt_from_xml=self.dt_from_xml,
+        )
+
+        if not self.print_minimal:
+            print("Time for 1 rollout: {:0.2f} s\n\n".format(time.time() - rollout_start))
+        return rollout_info
+
+    def collecting_trajs(self,
+                        starting_fullenvstate,
+                        starting_observation,
+                        controller_type,
+                        take_exploratory_actions=False,
+                        isRandom=False):
+
+        rollout_start = time.time()
+
+        #if evaluating, default to no action noise
+        if self.evaluating:
+            self.noise_actions = False
+
+        #######################################
+        #### select controller type
+        #######################################
+
+        if controller_type=='rand':
+            get_action = self.controller_randshooting.get_action
+        elif controller_type=='cem':
+            get_action = self.controller_cem.get_action
+        elif controller_type=='mppi':
+            get_action = self.controller_mppi.get_action
+
+        #######################################
+        #### lists for saving
+        #######################################
+
+        #lists for saving info
+        traj_taken = []
+        traj_taken_K = []
+        actions_taken = []
+        rewards = []
+        scores = []
+        env_infos = []
+
+        #######################################
+        #### init vars for rollout
+        #######################################
+
+        total_reward_for_episode = 0
+        step = 0
+        self.starting_fullenvstate = starting_fullenvstate
+
+        #######################################
+        #### initialize first K states/actions
+        #######################################
+
+        zero_ac = np.zeros((self.env.action_dim,))
+
+
+        if isinstance(starting_observation, dict):
+            obs, ag, g, successes = [], [], [], []
+            state_dict = starting_observation
+            obs.append(state_dict['observation'])
+            ag.append(state_dict['achieved_goal'])
+            g.append(state_dict['desired_goal'])
+
+            curr_state = obs[-1]
+            curr_state_K = [curr_state]  # not K yet, but will be
+
+        else:
+            curr_state = np.copy(starting_observation)
+            curr_state_K = [curr_state]  #not K yet, but will be
+
+
+        #take (K-1) steps of action 0
+        for z in range(self.K - 1):
+
+            # take step of action 0
+            curr_state, rew, _, env_info = self.env.step(zero_ac)
+            step += 1
+
+            actions_taken.append(zero_ac)
+            curr_state_K.append(curr_state)
+
+            #save info
+            rewards.append(rew)
+            scores.append(env_info['score'])
+            env_infos.append(env_info)
+            total_reward_for_episode += rew
+
+            # Note: rewards/actions/etc. are populated during these first K steps
+            # but traj_taken_K/traj_taken are not
+            # because curr_state_K is not of size K yet
+
+        #curr_state_K has K entries now
+        traj_taken.append(curr_state)
+        traj_taken_K.append(curr_state_K)
+
+        #######################################
+        #### loop over steps in rollout
+        #######################################
+
+        done = False
+        while not(done or step>=self.rollout_length):
+
+            if self.use_ground_truth_dynamics:
+                print(step)
+
+            ########################
+            #### get optimal action
+            ########################
+
+            #curr_state_K : past K states
+            #actions_taken : past all actions (taken so far in this rollout)
+            if isRandom:
+                best_action, _ = self.rand_policy.get_action(None, None)
+            else:
+                best_action, predicted_states_list = get_action(
+                    step, curr_state_K, actions_taken, starting_fullenvstate,
+                    self.evaluating, take_exploratory_actions)
+
+            # from ipdb import set_trace;
+            # set_trace()
+
+            #noise the action, as needed
+            action_to_take = np.copy(best_action)
+            clean_action = np.copy(action_to_take)
+            if self.noise_actions:
+                noise = self.noise_amount * npr.normal(
+                    size=action_to_take.shape)
+                action_to_take = action_to_take + noise
+                action_to_take = np.clip(action_to_take, -1, 1)
+            if self.document_noised_actions:
+                action_to_document = np.copy(action_to_take)
+            else:
+                action_to_document = np.copy(clean_action)
+
+            # from ipdb import set_trace;
+            # set_trace()
+
+            ########################
+            #### execute the action
+            ########################
+            next_state, rew, done, env_info = self.env.step(action_to_take)
+
+
+            if isinstance(next_state, dict):
+                state_dict = next_state
+                obs.append(state_dict['observation'])
+                ag.append(state_dict['achieved_goal'])
+                next_state = obs[-1]
+
+            if self.use_ground_truth_dynamics:
+                print("done step ", step)
+
+            #the most recent (K-1) acs
+            acs_Kminus1 = np.array(actions_taken[-(self.K - 1):])  #[K-1, acDim]
+
+            #create (past k) acs by combining (acs_Kminus1) with action
+            if self.K==1:
+                acs_K = np.expand_dims(action_to_document, 0)
+            else:
+                acs_K = np.append(acs_Kminus1, np.expand_dims(action_to_document, 0),0)  #[K, acDim]
+
+            ################################
+            #### save things + check if done
+            ################################
+            actions_taken.append(action_to_document)
+
+            # from ipdb import set_trace;
+            # set_trace()
+
+            #returned by taking a step in the env
+            curr_state = np.copy(next_state)
+
+            #remove current oldest element of K list (0th entry of 0th axis)
+            curr_state_K = np.delete(curr_state_K, 0, 0)
+            #add this new state to end of K list
+            curr_state_K = np.append(curr_state_K, np.expand_dims(
+                curr_state, 0), 0)
+
+            #save
+            traj_taken.append(curr_state)
+            #update
+            step += 1
+
+        ##########################
+        ##### save and return
+        ##########################
+        # np.set_printoptions(formatter={'float':'{:0.5f}'.format})
+
+        rollout_info = dict(
+            observations=np.array(traj_taken),
+            actions=np.array(actions_taken),
+
+            obs=np.array(obs),
+            ag=np.array(ag),
         )
 
         if not self.print_minimal:

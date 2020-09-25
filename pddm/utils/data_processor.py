@@ -43,20 +43,13 @@ class DataProcessor:
         self.normalization_data = normalization_data
         self.update_model_normalization(model)
 
-    def update_stats(self, model, dataset_trainRand, dataset_trainOnPol):
+    def update_stats(self, model, dataset_trainOnPol):
 
-        if (dataset_trainOnPol.dataX.shape[0] == 0):
-            temp_x = dataset_trainRand.dataX
-            temp_y = dataset_trainRand.dataY
-            temp_z = dataset_trainRand.dataZ
-        else:
-            # concat rand+onPol together, to calculate the new mean/std
-            temp_x = np.concatenate(
-                [dataset_trainRand.dataX, dataset_trainOnPol.dataX])
-            temp_y = np.concatenate(
-                [dataset_trainRand.dataY, dataset_trainOnPol.dataY])
-            temp_z = np.concatenate(
-                [dataset_trainRand.dataZ, dataset_trainOnPol.dataZ])
+
+        temp_x = dataset_trainOnPol.dataX
+        temp_y = dataset_trainOnPol.dataY
+        temp_z = dataset_trainOnPol.dataZ
+
 
         #clip actions, before calculating mean/std
         temp_y = np.clip(temp_y, -1, 1)

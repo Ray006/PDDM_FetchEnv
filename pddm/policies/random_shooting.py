@@ -46,6 +46,99 @@ class RandomShooting(object):
                                         vel_max = params.rand_policy_vel_max,
                                         hold_action = params.rand_policy_hold_action,)
 
+    # def training_reward_func(self, resulting_states):  ######
+    #
+    #     # print('Test: this is the PushEnv reward func')
+    #     distance_threshold = 0.05
+    #     count_ray = 0
+    #
+    #     # from ipdb import set_trace;
+    #     # set_trace()
+    #
+    #     observations=np.concatenate(([resulting_states[:, :, i, :] for i in range(resulting_states.shape[2])]))
+    #
+    #
+    #     if np.ndim(observations) == 3:  # for the planner to select actions
+    #         n, H, m = observations.shape
+    #         assert m == 25
+    #         reward = np.zeros(n)
+    #         dones = np.zeros(n)
+    #
+    #         grip_pos = observations[:, :, :3]
+    #         ag = observations[:, :, 3:6]
+    #
+    #         # ****************** meaningful traj?
+    #         first_ag = ag[:, 0]    # n*3
+    #         first_ag_reshape = np.tile(first_ag, (1, H-1)).reshape(-1, H-1, first_ag.shape[1])  # n * (H-1) * 3
+    #
+    #         delta_movement_trajs = np.linalg.norm(ag[:, 1:] - first_ag_reshape, axis=2)  # compare with the object starting pos
+    #         for index, delta_movement_traj in enumerate(delta_movement_trajs):
+    #             if any(delta_movement_traj > distance_threshold):  # if the object is moved
+    #                 reward[index] += 10
+    #
+    #                 # count_ray += 1
+    #                 # print('move the ag:', count_ray)
+    #         # ****************** meaningful traj?
+    #
+    #         # from ipdb import set_trace;
+    #         # set_trace()
+    #
+    #         d_grip2ag = np.linalg.norm(grip_pos - ag, axis=-1)   # n * H
+    #         d_grip2ag_reshape = d_grip2ag.sum(axis=1)   # n
+    #         reward += - d_grip2ag_reshape
+    #
+    #         return reward
+    def training_reward_func(self, resulting_states):  ######
+
+        # print('Test: this is the PushEnv reward func')
+        distance_threshold = 0.05
+        count_ray = 0
+
+        # from ipdb import set_trace;
+        # set_trace()
+
+        # index = np.array([i for i in range(900)])
+        # x = index.reshape(3, 2, 50, 3)
+        # y = np.concatenate(([x[:, :, i, :] for i in range(x.shape[2])]))
+        # z = y.reshape(50, 3, 2, 3)
+
+        observations = np.concatenate(([resulting_states[:, :, i, :] for i in range(resulting_states.shape[2])]))
+
+        if np.ndim(observations) == 3:  # for the planner to select actions
+            n, H, m = observations.shape
+            assert m == 25
+            reward = np.zeros(n)
+            dones = np.zeros(n)
+
+            grip_pos = observations[:, :, :3]
+            ag = observations[:, :, 3:6]
+
+            # ****************** meaningful traj?
+            first_ag = ag[:, 0]  # n*3
+            first_ag_reshape = np.tile(first_ag, (1, H - 1)).reshape(-1, H - 1, first_ag.shape[1])  # n * (H-1) * 3
+
+            delta_movement_trajs = np.linalg.norm(ag[:, 1:] - first_ag_reshape,
+                                                  axis=2)  # compare with the object starting pos
+            for index, delta_movement_traj in enumerate(delta_movement_trajs):
+                if any(delta_movement_traj > distance_threshold):  # if the object is moved
+                    reward[index] += 10
+
+                    # count_ray += 1
+                    # print('move the ag:', count_ray)
+            # ****************** meaningful traj?
+
+            # from ipdb import set_trace;
+            # set_trace()
+
+            d_grip2ag = np.linalg.norm(grip_pos - ag, axis=-1)  # n * H
+            d_grip2ag_reshape = d_grip2ag.sum(axis=1)  # n
+            reward += - d_grip2ag_reshape
+
+            reward = reward.reshape(resulting_states.shape[2],-1)   ## dim from 1500 -> 500
+            reward = reward.sum(axis=1)
+
+            return reward
+
     def get_action(self, step_number, curr_state_K, actions_taken_so_far,
                    starting_fullenvstate, evaluating, take_exploratory_actions):
         """Select optimal action
@@ -129,9 +222,20 @@ class RandomShooting(object):
         ### evaluate the predicted trajectories
         ############################
 
+        # #calculate costs
+        # costs, mean_costs, std_costs = calculate_costs(resulting_states_list, all_samples,
+        #                         self.reward_func, evaluating, take_exploratory_actions)
+
+        # from ipdb import set_trace;
+        # set_trace()
+
+
         #calculate costs
-        costs, mean_costs, std_costs = calculate_costs(resulting_states_list, all_samples,
-                                self.reward_func, evaluating, take_exploratory_actions)
+        reward = self.training_reward_func(resulting_states_list)
+        costs = - reward
+
+        # ensemble_size = len(resulting_states_list)
+        # tiled_actions = np.tile(actions, (ensemble_size, 1, 1))
 
         #pick best action sequence
         best_score = np.min(costs)

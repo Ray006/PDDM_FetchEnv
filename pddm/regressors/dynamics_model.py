@@ -112,13 +112,9 @@ class Dyn_Model:
 
 
     def train(self,
-              data_inputs_rand,
-              data_outputs_rand,
               data_inputs_onPol,
               data_outputs_onPol,
               nEpoch,
-              inputs_val=None,
-              outputs_val=None,
               inputs_val_onPol=None,
               outputs_val_onPol=None):
 
@@ -129,22 +125,15 @@ class Dyn_Model:
         val_loss_list_rand = []
         val_loss_list_onPol = []
         val_loss_list_xaxis = []
-        rand_loss_list = []
         onPol_loss_list = []
 
-        #combine rand+onPol into 1 dataset
-        if data_inputs_onPol.shape[0]>0:
-            data_inputs = np.concatenate((data_inputs_rand, data_inputs_onPol))
-            data_outputs = np.concatenate((data_outputs_rand,
-                                           data_outputs_onPol))
-        else:
-            data_inputs = data_inputs_rand.copy()
-            data_outputs = data_outputs_rand.copy()
+
+        data_inputs = data_inputs_onPol.copy()
+        data_outputs = data_outputs_onPol.copy()
 
         #dims
-        nData_rand = data_inputs_rand.shape[0]
         nData_onPol = data_inputs_onPol.shape[0]
-        nData = nData_rand + nData_onPol
+        nData = nData_onPol
 
         #training loop
         for i in range(nEpoch):
@@ -198,57 +187,34 @@ class Dyn_Model:
             mean_training_loss = sum_training_loss / num_training_batches
 
             if ((i % 10 == 0) or (i == (nEpoch - 1))):
+                val_loss_list_xaxis.append(len(training_loss_list))
 
-                if inputs_val is None:
-                    pass
+                ##############################
+                ####### validation loss on onPol
+                ##############################
 
-                else:
-                    ##############################
-                    ####### validation loss on rand
-                    ##############################
+                #loss on on-pol validation set
+                val_loss_onPol = self.get_loss(inputs_val_onPol,
+                                               outputs_val_onPol)
+                val_loss_list_onPol.append(val_loss_onPol)
 
-                    #loss on validation set
-                    val_loss_rand = self.get_loss(inputs_val, outputs_val)
-                    val_loss_list_rand.append(val_loss_rand)
-                    val_loss_list_xaxis.append(len(training_loss_list))
 
-                    ##############################
-                    ####### validation loss on onPol
-                    ##############################
+                ##############################
+                ####### training loss on onPol
+                ##############################
 
-                    #loss on on-pol validation set
-                    val_loss_onPol = self.get_loss(inputs_val_onPol,
-                                                   outputs_val_onPol)
-                    val_loss_list_onPol.append(val_loss_onPol)
-
-                    ##############################
-                    ####### training loss on rand
-                    ##############################
-
-                    loss_rand = self.get_loss(
-                        data_inputs_rand,
-                        data_outputs_rand,
+                if (nData_onPol > 0):
+                    loss_onPol = self.get_loss(
+                        data_inputs_onPol,
+                        data_outputs_onPol,
                         fraction_of_data=0.5,
                         shuffle_data=True)
-                    rand_loss_list.append(loss_rand)
-
-                    ##############################
-                    ####### training loss on onPol
-                    ##############################
-
-                    if (nData_onPol > 0):
-                        loss_onPol = self.get_loss(
-                            data_inputs_onPol,
-                            data_outputs_onPol,
-                            fraction_of_data=0.5,
-                            shuffle_data=True)
-                        onPol_loss_list.append(loss_onPol)
+                    onPol_loss_list.append(loss_onPol)
 
             if not self.print_minimal:
                 if ((i % 10) == 0 or (i == (nEpoch - 1))):
                     print("\n=== Epoch {} ===".format(i))
                     print("    train loss: ", mean_training_loss)
-                    print("    val rand: ", val_loss_rand)
                     print("    val onPol: ", val_loss_onPol)
 
         if not self.print_minimal:
@@ -259,7 +225,7 @@ class Dyn_Model:
             val_loss_list_rand = val_loss_list_rand,
             val_loss_list_onPol = val_loss_list_onPol,
             val_loss_list_xaxis = val_loss_list_xaxis,
-            rand_loss_list = rand_loss_list,
+            rand_loss_list = None,
             onPol_loss_list = onPol_loss_list,)
 
         #done
